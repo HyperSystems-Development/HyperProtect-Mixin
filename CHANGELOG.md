@@ -49,6 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **FaultReporter** — sampled error logging (first + every 100th) to prevent log flooding
 - **HookSlot caching** — eagerly-resolved MethodHandles with volatile identity-checked caching for minimal overhead
 - **Deny message deduplication** — `SimpleBlockInteractionGate` applies 500ms per-player cooldown to prevent rapid-fire denial messages
-- **JitPack publishing** — `maven-publish` plugin for consumer mods to depend via `com.github.HyperSystemsDev:HyperProtect-Mixin:1.0.0`
+- **JitPack publishing** — `maven-publish` plugin for consumer mods to depend via `com.github.HyperSystems-Development:HyperProtect-Mixin:1.0.0`
 - **Build system** — Java 25 toolchain, Hytale server resolved from `maven.hytale.com`, `fileTree` glob for Hyxin libs, centralized version expansion in `manifest.json`
 - **Complete documentation** — getting-started guide, hook reference, integration patterns, code examples, feature detection guide, and OrbisGuard migration guide

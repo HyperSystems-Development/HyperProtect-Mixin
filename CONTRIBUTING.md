@@ -8,7 +8,7 @@ Thank you for your interest in contributing! This guide covers the architecture,
 - **Gradle** (wrapper included)
 - **Hytale Server** (Early Access) with `--accept-early-plugins` flag
 - **Hyxin** early plugin loader (v0.0.11+)
-- A consumer mod for testing hooks (e.g., [HyperFactions](https://github.com/HyperSystemsDev/HyperFactions))
+- A consumer mod for testing hooks (e.g., [HyperFactions](https://github.com/HyperSystems-Development/HyperFactions))
 
 ## Architecture Overview
 
@@ -159,6 +159,6 @@ refactor: extract common interceptor pattern to base utility
 
 ## Reporting Issues
 
-- **Bugs**: Use the [Bug Report](https://github.com/HyperSystemsDev/HyperProtect-Mixin/issues/new?template=BUG_REPORT.yml) template
-- **Feature Requests**: Use the [Feature Request](https://github.com/HyperSystemsDev/HyperProtect-Mixin/issues/new?template=FEATURE_REQUEST.yml) template
+- **Bugs**: Use the [Bug Report](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues/new?template=BUG_REPORT.yml) template
+- **Feature Requests**: Use the [Feature Request](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues/new?template=FEATURE_REQUEST.yml) template
 - **Questions**: Join the [HyperSystems Discord](https://discord.com/invite/aZaa5vcFYh)

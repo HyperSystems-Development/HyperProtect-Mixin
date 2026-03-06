@@ -1,7 +1,7 @@
 # HyperProtect-Mixin
 
 [![Discord](https://img.shields.io/discord/1327109068498677810?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.com/invite/aZaa5vcFYh)
-[![GitHub](https://img.shields.io/github/stars/HyperSystemsDev/HyperProtect-Mixin?style=social)](https://github.com/HyperSystemsDev/HyperProtect-Mixin)
+[![GitHub](https://img.shields.io/github/stars/HyperSystems-Development/HyperProtect-Mixin?style=social)](https://github.com/HyperSystems-Development/HyperProtect-Mixin)
 
 Server-level event interception via Hyxin mixins for Hytale. Provides a lock-free bridge API that any mod can use to intercept and control server actions — no compile-time dependency required.
 
@@ -235,11 +235,11 @@ Output: `build/libs/HyperProtect-Mixin-1.1.0.jar`
 ## Links
 
 - [HyperSystems Website](https://hypersystems.dev)
-- [GitHub Repository](https://github.com/HyperSystemsDev/HyperProtect-Mixin)
-- [Issue Tracker](https://github.com/HyperSystemsDev/HyperProtect-Mixin/issues)
+- [GitHub Repository](https://github.com/HyperSystems-Development/HyperProtect-Mixin)
+- [Issue Tracker](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues)
 - [Discord](https://discord.com/invite/aZaa5vcFYh)
-- [HyperFactions](https://github.com/HyperSystemsDev/HyperFactions) (primary consumer)
+- [HyperFactions](https://github.com/HyperSystems-Development/HyperFactions) (primary consumer)
 
 ---
 
-*Part of the [HyperSystems](https://hypersystems.dev) plugin suite — built for Hytale, open source, and actively maintained.*
+*Part of the [HyperSystems](https://github.com/HyperSystems-Development) plugin suite — built for Hytale, open source, and actively maintained.*

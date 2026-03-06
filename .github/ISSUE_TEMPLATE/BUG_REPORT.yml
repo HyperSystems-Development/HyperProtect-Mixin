@@ -116,11 +116,11 @@ body:
     attributes:
       label: Confirmation Checklist
       options:
-        - label: I have checked the existing [issues](https://github.com/HyperSystemsDev/HyperProtect-Mixin/issues) for duplicates.
+        - label: I have checked the existing [issues](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues) for duplicates.
           required: true
 
         - label: I have verified `--accept-early-plugins` is in my server start script.
           required: true
 
-        - label: I agree to follow this project's [Code of Conduct](https://github.com/HyperSystemsDev/HyperProtect-Mixin/blob/main/CODE_OF_CONDUCT.md).
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/HyperSystems-Development/HyperProtect-Mixin/blob/main/CODE_OF_CONDUCT.md).
           required: true
