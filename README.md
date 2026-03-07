@@ -5,7 +5,7 @@
 
 Server-level event interception via Hyxin mixins for Hytale. Provides a lock-free bridge API that any mod can use to intercept and control server actions — no compile-time dependency required.
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Platform:** Hytale Early Access
 **Type:** Hyxin Early Plugin
 **License:** GPLv3
@@ -14,7 +14,7 @@ Server-level event interception via Hyxin mixins for Hytale. Provides a lock-fre
 
 ## What It Does
 
-HyperProtect-Mixin injects protection checkpoints into the Hytale server at the bytecode level using [Hyxin](https://www.curseforge.com/hytale/mods/hyxin) mixins. It exposes **20 protection hooks** through a shared `AtomicReferenceArray` bridge that any mod can read and write without a compile-time dependency.
+HyperProtect-Mixin injects protection checkpoints into the Hytale server at the bytecode level using [Hyxin](https://www.curseforge.com/hytale/mods/hyxin) mixins. It exposes **27 protection hooks** through a 30-slot `AtomicReferenceArray` bridge that any mod can read and write without a compile-time dependency.
 
 When a protected action occurs (block break, explosion, PvP hit, portal use, etc.), the mixin interceptor checks the bridge for a registered hook. If one exists, it calls the hook's `evaluate` method and acts on the verdict.
 
@@ -22,7 +22,7 @@ When a protected action occurs (block break, explosion, PvP hit, portal use, etc
 
 | | HyperProtect-Mixin | OrbisGuard-Mixins |
 |---|---|---|
-| **Hook count** | 20 hooks (23 interceptors) | 11 hooks |
+| **Hook count** | 27 hooks (29 interceptors) | 27 mixins |
 | **Bridge type** | `AtomicReferenceArray` (lock-free reads) | `ConcurrentHashMap` (lock contention) |
 | **Safety model** | Fail-open (errors allow actions) | Varies |
 | **Bypass handling** | Hook decides (no coupling to permissions) | Mixin checks permissions |
@@ -67,8 +67,8 @@ Protection hooks: block-break, block-place, explosion, entity-damage, ...
 
 ```
 1. Server starts → Hyxin loads HyperProtect-Mixin as an early plugin
-2. Plugin creates AtomicReferenceArray<Object>(24) in System.getProperties()
-3. Hyxin injects 23 mixin interceptors into server bytecode
+2. Plugin creates AtomicReferenceArray<Object>(30) in System.getProperties()
+3. Hyxin injects 29 mixin interceptors into server bytecode
 4. Consumer mod (e.g., HyperFactions) places hook objects at slot indices
 5. Server event fires → interceptor reads hook from bridge → calls evaluate() → acts on verdict
 ```
@@ -89,7 +89,7 @@ All hooks return `int` verdicts (except `respawn` which returns `double[]` coord
 
 ## Hook List
 
-### Building (7 hooks)
+### Building (8 hooks)
 
 | Slot | Name | Description |
 |------|------|-------------|
@@ -100,6 +100,7 @@ All hooks return `int` verdicts (except `respawn` which returns `double[]` coord
 | 18 | `block_place` | Block placement |
 | 19 | `hammer` | Hammer block cycling (CycleBlockGroupInteraction) |
 | 20 | `use` | Block state changes, entity capture, and NPC interactions |
+| 25 | `fluid_spread` | Non-fire fluid spreading (water, lava) |
 
 ### Items (3 hooks)
 
@@ -109,25 +110,30 @@ All hooks return `int` verdicts (except `respawn` which returns `double[]` coord
 | 5 | `death_drop` | Keep-inventory-on-death behavior |
 | 6 | `durability` | Item durability loss prevention |
 
-### Containers (2 hooks)
+### Containers (4 hooks)
 
 | Slot | Name | Description |
 |------|------|-------------|
 | 7 | `container_access` | Crafting/workbench access |
 | 17 | `container_open` | Storage container opening |
+| 23 | `crafting_resource` | Crafting resource validation |
+| 29 | `barter_trade` | Barter/trade NPC interactions |
 
-### Combat (1 hook)
+### Combat (2 hooks)
 
 | Slot | Name | Description |
 |------|------|-------------|
 | 16 | `entity_damage` | Player-initiated damage (PvP and PvE) |
+| 27 | `projectile_launch` | Projectile launch interception |
 
-### Entities (2 hooks)
+### Entities (4 hooks)
 
 | Slot | Name | Description |
 |------|------|-------------|
 | 8 | `mob_spawn` | NPC/mob spawning (4 interceptors) |
 | 22 | `respawn` | Player respawn location override (value hook) |
+| 26 | `prefab_spawn` | Prefab entity spawn gating |
+| 28 | `mount` | Mount/ride entity interception |
 
 ### Transport (3 hooks)
 
@@ -143,6 +149,12 @@ All hooks return `int` verdicts (except `respawn` which returns `double[]` coord
 |------|------|-------------|
 | 11 | `command` | Command execution filtering |
 | 12 | `interaction_log` | Desync log suppression (boolean, not verdict) |
+
+### World Map (1 hook)
+
+| Slot | Name | Description |
+|------|------|-------------|
+| 24 | `map_marker` | Map marker visibility filtering |
 
 ### Utility Slots (not hooks)
 
@@ -183,7 +195,7 @@ bridge.set(0, new Object() {
 });
 ```
 
-See [docs/hooks.md](docs/hooks.md) for complete method signatures for all 20 hooks.
+See [docs/hooks.md](docs/hooks.md) for complete method signatures for all 27 hooks.
 
 ---
 
@@ -196,7 +208,7 @@ HyperProtect-Mixin requires **zero configuration**. It auto-detects and initiali
 | Property | Value | Purpose |
 |----------|-------|---------|
 | `hyperprotect.bridge.active` | `"true"` | Bridge initialized |
-| `hyperprotect.bridge.version` | `"1.1.0"` | Bridge version |
+| `hyperprotect.bridge.version` | `"1.2.0"` | Bridge version |
 | `hyperprotect.mode` | `"standalone"` or `"compatible"` | Operating mode (compatible when OrbisGuard-Mixins detected) |
 | `hyperprotect.intercept.*` | `"true"` | Per-interceptor load confirmation |
 
@@ -215,7 +227,7 @@ See [docs/feature-detection.md](docs/feature-detection.md) for the full list.
 ./gradlew jar
 ```
 
-Output: `build/libs/HyperProtect-Mixin-1.1.0.jar`
+Output: `build/libs/HyperProtect-Mixin-1.2.0.jar`
 
 ---
 
@@ -224,7 +236,7 @@ Output: `build/libs/HyperProtect-Mixin-1.1.0.jar`
 | Document | Description |
 |----------|-------------|
 | [Getting Started](docs/getting-started.md) | Quick start guide with minimal registration example |
-| [Hook Reference](docs/hooks.md) | All 20 hooks with method signatures and details |
+| [Hook Reference](docs/hooks.md) | All 27 hooks with method signatures and details |
 | [Integration Patterns](docs/patterns.md) | Fail-open, verdicts, bypass, threading, messages |
 | [Code Examples](docs/examples.md) | Complete working examples for common use cases |
 | [Feature Detection](docs/feature-detection.md) | System properties and spawn startup behavior |

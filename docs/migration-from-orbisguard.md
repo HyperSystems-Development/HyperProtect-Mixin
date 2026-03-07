@@ -38,6 +38,13 @@ This guide covers migrating your mod from OrbisGuard-Mixins to HyperProtect-Mixi
 | *(new)* | 17 (`container_open`) | `evaluateContainerOpen(UUID,String,int,int,int)→int` |
 | *(new)* | 18 (`block_place`) | `evaluateBlockPlace(UUID,String,int,int,int)→int` |
 | `orbisguard.use.hook` | 20 (`use`) | `evaluateUse(UUID,String,int,int,int)->int` |
+| *(new)* | 23 (`crafting_resource`) | `evaluateChestAccess(UUID,String,int,int,int,int,int,int)→int` |
+| *(new)* | 24 (`map_marker`) | `evaluateMapMarker(UUID,String,String,int,int,int)→int` |
+| *(new)* | 25 (`fluid_spread`) | `evaluateFluidSpread(String,int,int,int)→int` |
+| *(new)* | 26 (`prefab_spawn`) | `evaluatePrefabSpawn(String,int,int,int)→int` |
+| *(new)* | 27 (`projectile_launch`) | `evaluateProjectileLaunch(UUID,String,int,int,int)→int` |
+| *(new)* | 28 (`mount`) | `evaluateMount(UUID,String,int,int,int)→int` |
+| *(new)* | 29 (`barter_trade`) | `evaluateBarterTrade(UUID,String,int,int,int)→int` |
 
 ## Registry Migration
 
@@ -204,6 +211,23 @@ ClassLoader loader = (ClassLoader) System.getProperties().get("hyperprotect.brid
 OrbisGuard shipped interface classes (e.g., `CommandProtectionHook`) that hook implementations could implement. HyperProtect-Mixin uses **reflection-only contracts** — no interfaces shipped.
 
 Your hook objects just need to have methods with the right names and signatures. No `implements` clause needed.
+
+## New HPM-Only Hooks (No OrbisGuard Equivalent)
+
+HyperProtect-Mixin v1.2.0 provides these hooks that have no OrbisGuard counterpart:
+- `crafting_resource` (23) — crafting resource validation at recipe level
+- `map_marker` (24) — per-player map marker visibility filtering
+- `fluid_spread` (25) — non-fire fluid spread blocking (water/lava)
+- `prefab_spawn` (26) — prefab entity spawn gating
+- `projectile_launch` (27) — projectile launch interception
+- `mount` (28) — mount/ride entity interception
+- `barter_trade` (29) — barter/trade NPC interaction filtering
+- `block_place` (18) — block placement interception
+- `entity_damage` (16) — player-initiated entity damage (PvP/PvE)
+- `container_open` (17) — storage container opening
+- `seat` (21) — block seating interception
+- `capture_crate` (20) — entity capture via capture crate
+- `respawn` (22) — player respawn location override
 
 ## Checklist
 

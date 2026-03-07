@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [1.2.0] - 2026-03-06
+
+**Server Version:** `2026.02.19-1a311a592`
+
+### Added
+- **7 new protection hooks** (29 interceptors, 27 hooks total):
+  - **CraftingResourceFilter** (slot 23) — gates crafting resource validation at the recipe level, with bench position context from `BenchPositionCapture`
+  - **MapMarkerFilter** (slot 24) — filters world map marker visibility per-player via `OtherPlayersMarkerProvider`
+  - **FluidSpread** (slot 25) — intercepts non-fire fluid spreading (water, lava) in `FluidTicker.process()`, extending the existing `FlameTickInterceptor`
+  - **PrefabSpawnInterceptor** (slot 26) — gates prefab entity spawning during `Store.addEntity()` for `LOAD` reason entities
+  - **ProjectileLaunchInterceptor** (slot 27) — intercepts projectile launches via `ProjectileModule.spawnProjectile()`
+  - **MountInterceptor** (slot 28) — intercepts mount/ride entity interactions via `DamageEntityInteraction`
+  - **BarterTradeInterceptor** (slot 29) — gates barter/trade NPC interactions
+- **Bridge expanded to 30 slots** (was 24) — `AtomicReferenceArray<Object>(30)` accommodates all new hooks
+- **CraftingContext bridge class** — ThreadLocal-based cross-mixin context sharing for bench position and player UUID between `BenchPositionCapture` and `CraftingResourceFilter`
+- **NPC role context extraction** — `SimpleInstantInteractionGate` extracts NPC role names via reflection and stores in `hyperprotect.context.npc_role` system property for consumer mods to classify tame vs interact actions
+- **Block type context extraction** — `SimpleBlockInteractionGate` extracts `BlockType` ID and state from the world at the target position, stored in `hyperprotect.context.block_id` and `hyperprotect.context.block_state` system properties
+- **SAFE_MIXINS expanded** — 14 unique mixin classes (was 10) for OrbisGuard compatibility mode. All 7 new interceptors have no OG equivalent and are always active
+- Per-interceptor system properties for all 7 new hooks (`hyperprotect.intercept.crafting_resource`, `hyperprotect.intercept.map_marker_filter`, `hyperprotect.intercept.fluid_spread`, `hyperprotect.intercept.prefab_spawn`, `hyperprotect.intercept.projectile_launch`, `hyperprotect.intercept.mount`, `hyperprotect.intercept.barter_trade`)
+
+### Changed
+- **Multi-signal OrbisGuard detection** — improved `HyperProtectConfigPlugin` to check system properties (`orbisguard.mixins.loaded`), bridge object (`orbisguard.bridge`), and JAR scan fallback for more reliable OG detection
+- `BenchPositionCapture` now stores bench position and player UUID in `CraftingContext` ThreadLocals (previously unused capture data)
+
 ## [1.1.0] - 2026-02-26
 
 **Server Version:** `2026.02.19-1a311a592`

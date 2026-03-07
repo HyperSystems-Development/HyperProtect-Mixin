@@ -14,7 +14,7 @@ Each mixin interceptor sets system properties on load. These are also pre-declar
 
 ### Per-Interceptor Properties
 
-Properties are organized by the mixin class that sets them. In standalone mode, all properties are set. In compatible mode (OrbisGuard detected), only properties from the 6 unique HP mixins are pre-declared.
+Properties are organized by the mixin class that sets them. In standalone mode, all properties are set. In compatible mode (OrbisGuard detected), only properties from the 14 unique HP mixins are pre-declared.
 
 #### Standalone Interceptors (dedicated mixin classes)
 
@@ -41,6 +41,13 @@ Properties are organized by the mixin class that sets them. In standalone mode, 
 | `hyperprotect.intercept.block_place` | BlockPlaceInterceptor | `block_place` (18) |
 | `hyperprotect.intercept.respawn` | RespawnInterceptor | `respawn` (22) |
 | `hyperprotect.intercept.capture_crate_entity` | CaptureCrateGate | `use` (20) |
+| `hyperprotect.intercept.crafting_resource` | CraftingResourceFilter | `crafting_resource` (23) |
+| `hyperprotect.intercept.map_marker_filter` | MapMarkerFilter | `map_marker` (24) |
+| `hyperprotect.intercept.fluid_spread` | FlameTickInterceptor | `fluid_spread` (25) |
+| `hyperprotect.intercept.prefab_spawn` | PrefabSpawnInterceptor | `prefab_spawn` (26) |
+| `hyperprotect.intercept.projectile_launch` | ProjectileLaunchInterceptor | `projectile_launch` (27) |
+| `hyperprotect.intercept.mount` | MountInterceptor | `mount` (28) |
+| `hyperprotect.intercept.barter_trade` | BarterTradeInterceptor | `barter_trade` (29) |
 
 #### SimpleBlockInteractionGate (consolidated — 20 interaction types)
 
@@ -82,6 +89,17 @@ All set by `SimpleInstantInteractionGate` which intercepts `SimpleInstantInterac
 | `hyperprotect.intercept.npc_use` | UseNPCInteraction | `use` (20) |
 | `hyperprotect.intercept.npc_contextual_use` | ContextualUseNPCInteraction | `use` (20) |
 
+#### Context Properties
+
+These system properties are set dynamically during hook evaluation and consumed by hook handlers:
+
+| Property | Set By | Description |
+|----------|--------|-------------|
+| `hyperprotect.context.interaction` | SimpleBlockInteractionGate, CaptureCrateGate | Interaction class name for routing |
+| `hyperprotect.context.npc_role` | SimpleInstantInteractionGate | NPC role name (e.g., "shopkeeper", "quest_giver") — extracted via reflection |
+| `hyperprotect.context.block_id` | SimpleBlockInteractionGate | Target block type ID at interaction position |
+| `hyperprotect.context.block_state` | SimpleBlockInteractionGate | Target block state ID at interaction position |
+
 ## Usage
 
 ```java
@@ -101,7 +119,7 @@ String mode = System.getProperty("hyperprotect.mode"); // "standalone" or "compa
 
 ## OrbisGuard Compatibility Mode
 
-When OrbisGuard-Mixins is detected in `earlyplugins/`, `HyperProtectConfigPlugin` disables 17 conflicting HP mixins, keeping only 6 unique mixin classes active:
+When OrbisGuard-Mixins is detected in `earlyplugins/`, `HyperProtectConfigPlugin` disables 15 conflicting HP mixins, keeping 14 unique mixin classes active:
 
 | Active Mixin | Coverage |
 |-------------|----------|
@@ -111,8 +129,16 @@ When OrbisGuard-Mixins is detected in `earlyplugins/`, `HyperProtectConfigPlugin
 | `BlockPlaceInterceptor` | block_place |
 | `EntityDamageInterceptor` | entity_damage |
 | `RespawnInterceptor` | respawn |
+| `CraftingResourceFilter` | crafting_resource |
+| `MapMarkerFilter` | map_marker |
+| `ProjectileLaunchInterceptor` | projectile_launch |
+| `MountInterceptor` | mount |
+| `PrefabSpawnInterceptor` | prefab_spawn |
+| `BarterTradeInterceptor` | barter_trade |
+| `FlameTickInterceptor` | fire_spread, fluid_spread |
+| `BenchPositionCapture` | workbench_context (for crafting_resource) |
 
-In compatible mode, only the properties from these 6 classes are pre-declared.
+In compatible mode, only the properties from these 14 classes are pre-declared.
 
 ## Spawn Startup Behavior
 

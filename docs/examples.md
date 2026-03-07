@@ -307,6 +307,79 @@ public class TerritorySeatHook {
 }
 ```
 
+## Mount Protection (Territory-Based)
+
+```java
+public class TerritoryMountHook {
+    private final TerritoryManager territories;
+
+    public TerritoryMountHook(TerritoryManager territories) {
+        this.territories = territories;
+    }
+
+    public int evaluateMount(UUID playerUuid, String worldName, int x, int y, int z) {
+        Territory territory = territories.getTerritoryAt(worldName, x, y, z);
+        if (territory == null) return 0; // Wilderness — allow
+        if (territory.isMember(playerUuid)) return 0; // Member — allow
+
+        return 1; // DENY_WITH_MESSAGE
+    }
+
+    public String fetchMountDenyReason(UUID playerUuid, String worldName, int x, int y, int z) {
+        Territory territory = territories.getTerritoryAt(worldName, x, y, z);
+        return "&#FF5555You cannot ride mounts in &gold" + territory.getName() + "&#FF5555!";
+    }
+}
+```
+
+## Projectile Protection (Safe Zone)
+
+```java
+public class SafeZoneProjectileHook {
+    private final ZoneManager zones;
+
+    public SafeZoneProjectileHook(ZoneManager zones) {
+        this.zones = zones;
+    }
+
+    public int evaluateProjectileLaunch(UUID playerUuid, String worldName, int x, int y, int z) {
+        Zone zone = zones.getZoneAt(worldName, x, y, z);
+        if (zone != null && zone.hasFlag("no-projectiles")) {
+            return 2; // DENY_SILENT
+        }
+        return 0; // ALLOW
+    }
+}
+```
+
+## Crafting Protection (Territory-Based)
+
+```java
+public class TerritoryCraftingResourceHook {
+    private final TerritoryManager territories;
+
+    public TerritoryCraftingResourceHook(TerritoryManager territories) {
+        this.territories = territories;
+    }
+
+    public int evaluateChestAccess(UUID playerUuid, String worldName,
+                                    int benchX, int benchY, int benchZ,
+                                    int benchX2, int benchY2, int benchZ2) {
+        Territory territory = territories.getTerritoryAt(worldName, benchX, benchY, benchZ);
+        if (territory == null) return 0; // Wilderness — allow
+        if (territory.isMember(playerUuid)) return 0; // Member — allow
+
+        return 1; // DENY_WITH_MESSAGE
+    }
+
+    public String fetchChestAccessDenyReason(UUID playerUuid, String worldName,
+                                              int benchX, int benchY, int benchZ) {
+        Territory territory = territories.getTerritoryAt(worldName, benchX, benchY, benchZ);
+        return "&#FF5555You cannot craft at this bench in &gold" + territory.getName() + "&#FF5555!";
+    }
+}
+```
+
 ## Respawn Override (Faction Home)
 
 ```java
@@ -379,6 +452,8 @@ public class MyProtectionPlugin extends JavaPlugin {
         bridge.set(20, new TerritoryUseHook(territories));            // use
         bridge.set(21, new TerritorySeatHook(territories));           // seat
         bridge.set(22, new FactionRespawnHook(getFactionManager()));  // respawn
+        bridge.set(23, new TerritoryCraftingResourceHook(territories));  // crafting_resource
+        bridge.set(28, new TerritoryMountHook(territories));             // mount
 
         // Mark spawn protection as ready
         bridge.set(13, Boolean.TRUE);  // spawn_ready
