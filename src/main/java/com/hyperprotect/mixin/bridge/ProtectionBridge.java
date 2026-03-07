@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 public final class ProtectionBridge {
 
     private static final String BRIDGE_KEY = "hyperprotect.bridge";
-    private static final int SLOT_COUNT = 24;
+    private static final int SLOT_COUNT = 30;
 
     // Slot indices — lowercase constants, same descriptive names as original hook keys
     public static final int block_break       = 0;
@@ -41,6 +41,13 @@ public final class ProtectionBridge {
     public static final int use               = 20;
     public static final int seat              = 21;
     public static final int respawn           = 22;
+    public static final int crafting_resource = 23;
+    public static final int map_marker_filter = 24;
+    public static final int fluid_spread      = 25;
+    public static final int prefab_spawn      = 26;
+    public static final int projectile_launch = 27;
+    public static final int mount             = 28;
+    public static final int barter_trade      = 29;
 
     private ProtectionBridge() {}
 

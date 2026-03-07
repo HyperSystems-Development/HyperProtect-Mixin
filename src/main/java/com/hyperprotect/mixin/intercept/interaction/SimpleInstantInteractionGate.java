@@ -181,6 +181,35 @@ public abstract class SimpleInstantInteractionGate {
     }
 
     /**
+     * Extracts the NPC role name from the target entity (if it's an NPC) and stores it
+     * in system properties for the hook to read. Uses reflection to avoid NPC module imports.
+     */
+    @Unique
+    private static void extractNpcRole(InteractionContext context,
+                                        CommandBuffer<EntityStore> commandBuffer) {
+        System.getProperties().remove("hyperprotect.context.npc_role");
+        try {
+            Ref<EntityStore> targetRef = context.getTargetEntity();
+            if (targetRef == null || !targetRef.isValid()) return;
+
+            Class<?> npcClass = Class.forName("com.hypixel.hytale.server.npc.entities.NPCEntity");
+            var getCompType = npcClass.getMethod("getComponentType");
+            @SuppressWarnings("unchecked")
+            var compType = (com.hypixel.hytale.component.ComponentType<EntityStore, ?>) getCompType.invoke(null);
+            Object npcEntity = commandBuffer.getComponent(targetRef, compType);
+            if (npcEntity == null) return;
+
+            var getRoleName = npcClass.getMethod("getRoleName");
+            String roleName = (String) getRoleName.invoke(npcEntity);
+            if (roleName != null) {
+                System.getProperties().put("hyperprotect.context.npc_role", roleName);
+            }
+        } catch (ClassNotFoundException ignored) {
+            // NPC module not loaded
+        } catch (Exception ignored) {}
+    }
+
+    /**
      * Redirects the {@code this.firstRun(...)} call inside
      * {@code SimpleInstantInteraction.tick0()}.
      *
@@ -218,6 +247,9 @@ public abstract class SimpleInstantInteractionGate {
                                 // Pass interaction class name to hook for debug logging
                                 System.getProperties().put("hyperprotect.context.interaction",
                                         self.getClass().getName());
+
+                                // For NPC interactions, extract the NPC role name via reflection
+                                extractNpcRole(context, commandBuffer);
 
                                 boolean useDoubles = (boolean) hook[3];
                                 int verdict;

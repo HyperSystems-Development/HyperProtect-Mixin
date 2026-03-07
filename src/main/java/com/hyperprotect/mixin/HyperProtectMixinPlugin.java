@@ -15,7 +15,11 @@ import java.util.logging.Level;
 
 /**
  * Early plugin entry point for HyperProtect-Mixin.
- * Initializes the protection bridge and stores cross-classloader references.
+ * Caches cross-classloader references and declares feature system properties.
+ *
+ * <p>Bridge initialization is handled by {@link HyperProtectConfigPlugin#onLoad(String)}
+ * which runs earlier in the mixin lifecycle. This class handles setup that requires
+ * the full plugin API (ChatFormatter handle caching, feature declarations).
  */
 public class HyperProtectMixinPlugin extends JavaPlugin {
 
@@ -27,8 +31,13 @@ public class HyperProtectMixinPlugin extends JavaPlugin {
     protected void setup() {
         super.setup();
 
-        // Initialize the bridge array
-        AtomicReferenceArray<Object> bridge = ProtectionBridge.init();
+        // Bridge is already initialized by HyperProtectConfigPlugin.onLoad().
+        // Ensure it exists (defensive — in case onLoad wasn't called).
+        AtomicReferenceArray<Object> bridge = ProtectionBridge.array();
+        if (bridge == null) {
+            bridge = ProtectionBridge.init();
+            System.setProperty("hyperprotect.bridge.active", "true");
+        }
 
         // Cache the ChatFormatter.format MethodHandle for cross-classloader access
         try {
@@ -44,27 +53,17 @@ public class HyperProtectMixinPlugin extends JavaPlugin {
         System.getProperties().put("hyperprotect.bridge.loader", getClass().getClassLoader());
 
         // Mark bridge as active with version for updater detection
-        System.setProperty("hyperprotect.bridge.active", "true");
         String version = getClass().getPackage().getImplementationVersion();
         System.setProperty("hyperprotect.bridge.version", version != null ? version : "unknown");
 
         // Determine operating mode based on OrbisGuard detection from HyperProtectConfigPlugin.
-        // When OG is present, HP only keeps 6 unique mixins and OG handles the rest.
         boolean compatMode = HyperProtectConfigPlugin.isOrbisGuardDetected();
         System.setProperty("hyperprotect.mode", compatMode ? "compatible" : "standalone");
 
         // Pre-declare intercepted features so consumer mods (HyperFactions) can detect
-        // them during plugin setup. Mixin class static initializers also set these, but those
-        // only run when the target game class is first loaded — which is AFTER plugin setup.
-        // Without pre-declaration, isFeatureAvailable() checks return false and hooks aren't registered.
+        // them during plugin setup.
         if (compatMode) {
-            // Compatible mode: only declare features from the 6 unique HP mixins
-            // SimpleBlockInteractionGate covers: use, hammer, seat, container_open, teleporter, portal, crop_harvest
-            // SimpleInstantInteractionGate covers: interaction_log, npc_use, npc_contextual_use
-            // CaptureCrateGate covers: capture_crate_entity
-            // BlockPlaceInterceptor covers: block_place
-            // EntityDamageInterceptor covers: entity_damage
-            // RespawnInterceptor covers: respawn
+            // Compatible mode: only declare features from the unique HP mixins
             System.setProperty("hyperprotect.intercept.block_place", "true");
             System.setProperty("hyperprotect.intercept.container_open", "true");
             System.setProperty("hyperprotect.intercept.entity_damage", "true");
@@ -81,6 +80,14 @@ public class HyperProtectMixinPlugin extends JavaPlugin {
             System.setProperty("hyperprotect.intercept.capture_crate_entity", "true");
             System.setProperty("hyperprotect.intercept.npc_use", "true");
             System.setProperty("hyperprotect.intercept.npc_contextual_use", "true");
+            // New features (always active — OG has no equivalents)
+            System.setProperty("hyperprotect.intercept.crafting_resource", "true");
+            System.setProperty("hyperprotect.intercept.map_marker_filter", "true");
+            System.setProperty("hyperprotect.intercept.fluid_spread", "true");
+            System.setProperty("hyperprotect.intercept.prefab_spawn", "true");
+            System.setProperty("hyperprotect.intercept.projectile_launch", "true");
+            System.setProperty("hyperprotect.intercept.mount", "true");
+            System.setProperty("hyperprotect.intercept.barter_trade", "true");
         } else {
             // Standalone mode: declare all features
             System.setProperty("hyperprotect.intercept.block_break", "true");
@@ -116,19 +123,31 @@ public class HyperProtectMixinPlugin extends JavaPlugin {
             System.setProperty("hyperprotect.intercept.capture_crate_entity", "true");
             System.setProperty("hyperprotect.intercept.npc_use", "true");
             System.setProperty("hyperprotect.intercept.npc_contextual_use", "true");
+            // New features
+            System.setProperty("hyperprotect.intercept.crafting_resource", "true");
+            System.setProperty("hyperprotect.intercept.map_marker_filter", "true");
+            System.setProperty("hyperprotect.intercept.fluid_spread", "true");
+            System.setProperty("hyperprotect.intercept.prefab_spawn", "true");
+            System.setProperty("hyperprotect.intercept.projectile_launch", "true");
+            System.setProperty("hyperprotect.intercept.mount", "true");
+            System.setProperty("hyperprotect.intercept.barter_trade", "true");
         }
 
         if (compatMode) {
             getLogger().at(Level.INFO).log("HyperProtect-Mixin loaded! (COMPATIBLE mode — OrbisGuard detected)");
             getLogger().at(Level.INFO).log("Active HP hooks: block-place, entity-damage, container-open, " +
                     "use, hammer, seat, teleporter, portal, respawn, crop-harvest, " +
-                    "capture-crate, npc-use, interaction-log");
+                    "capture-crate, npc-use, interaction-log, " +
+                    "crafting-resource, map-marker, fluid-spread, prefab-spawn, " +
+                    "projectile-launch, mount, barter-trade");
         } else {
             getLogger().at(Level.INFO).log("HyperProtect-Mixin loaded! (STANDALONE mode)");
             getLogger().at(Level.INFO).log("Protection hooks: block-break, block-place, explosion, entity-damage, " +
                     "auto-pickup, fire-spread, command, builder-tools, death-drop, durability, " +
                     "container-access, container-open, mob-spawn, teleporter, portal, " +
-                    "hammer, use, seat, respawn, crop-harvest, capture-crate, npc-use, interaction-log");
+                    "hammer, use, seat, respawn, crop-harvest, capture-crate, npc-use, interaction-log, " +
+                    "crafting-resource, map-marker, fluid-spread, prefab-spawn, " +
+                    "projectile-launch, mount, barter-trade");
         }
     }
 }
