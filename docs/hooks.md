@@ -1,6 +1,6 @@
 # Hook Reference
 
-All 20 hooks organized by category. Each hook is registered at a specific slot index in the `hyperprotect.bridge` array.
+All 27 hooks organized by category. Each hook is registered at a specific slot index in the `hyperprotect.bridge` array.
 
 All hooks return `int` verdicts unless noted otherwise:
 - `0` = ALLOW
@@ -65,6 +65,22 @@ Intercepts builder tool paste operations.
 | `fetchPasteDenyReason` | `String fetchPasteDenyReason(UUID playerUuid, String worldName, int x, int y, int z)` | deny message or null |
 
 **Intercepted actions:** Clipboard paste via `BuilderToolsPacketHandler.handleBuilderToolPasteClipboard()`.
+
+---
+
+### Slot 25: `fluid_spread`
+
+Intercepts non-fire fluid spreading (water, lava).
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateFluidSpread` | `int evaluateFluidSpread(String worldName, int x, int y, int z)` | verdict int (0 or 2 only) |
+
+**Intercepted actions:** Non-fire fluid tick/spread via `FluidTicker.process()`. Only intercepts fluid tickers that are NOT fire-type (fire has its own hook at slot 2). Handled by the same `FlameTickInterceptor` mixin.
+
+**Note:** No player context — only returns 0 (allow) or 2 (silent deny).
+
+**Use cases:** Prevent water/lava griefing in claimed territory. Block fluid placement in safe zones.
 
 ---
 
@@ -191,6 +207,61 @@ Controls workbench/crafting container access.
 
 ---
 
+### Slot 23: `crafting_resource`
+
+Intercepts crafting resource validation at the recipe level.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateChestAccess` | `int evaluateChestAccess(UUID playerUuid, String worldName, int benchX, int benchY, int benchZ, int benchX2, int benchY2, int benchZ2)` | verdict int |
+| `fetchChestAccessDenyReason` | `String fetchChestAccessDenyReason(UUID playerUuid, String worldName, int benchX, int benchY, int benchZ)` | deny message or null |
+
+**Intercepted actions:** Crafting resource validation in `CraftingManager.isValidBenchForRecipe()`. Uses bench coordinates captured by `BenchPositionCapture` via the `CraftingContext` bridge class.
+
+**Note:** Player UUID and bench position are provided via ThreadLocal context from `BenchPositionCapture`.
+
+**Use cases:** Prevent crafting with protected workbenches. Restrict recipe access based on territory ownership.
+
+---
+
+### Slot 29: `barter_trade`
+
+Intercepts barter/trade NPC interactions.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateBarterTrade` | `int evaluateBarterTrade(UUID playerUuid, String worldName, int x, int y, int z)` | verdict int |
+| `fetchBarterTradeDenyReason` | `String fetchBarterTradeDenyReason(UUID playerUuid, String worldName, int x, int y, int z)` | deny message or null |
+
+**Intercepted actions:** Barter/trade interactions with NPCs. Position is the NPC's location.
+
+**Use cases:** Restrict NPC trading in claimed territory. Block trading with specific NPCs in safe zones.
+
+---
+
+## World Map
+
+### Slot 24: `map_marker`
+
+Filters world map marker visibility per player.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateMapMarker` | `int evaluateMapMarker(UUID viewerUuid, String worldName, String markerId, int x, int y, int z)` | verdict int (0 or 2 only) |
+
+**Intercepted actions:** Map marker rendering in `OtherPlayersMarkerProvider.update()`. Each marker is checked individually before being added to the player's map view.
+
+**Parameters:**
+- `viewerUuid` — The UUID of the player viewing the map
+- `markerId` — The marker's identifier string
+- `x, y, z` — The marker's world position
+
+**Note:** No messaging — returns 0 (show marker) or 2 (hide marker). The viewer UUID is captured from the enclosing `update()` method via a secondary redirect.
+
+**Use cases:** Hide enemy faction markers. Show only allied markers in claimed territory. Filter markers by proximity or permission.
+
+---
+
 ## Combat
 
 ### Slot 16: `entity_damage`
@@ -212,6 +283,22 @@ Intercepts player-initiated entity damage (PvP and player-vs-entity).
 **Use cases:** PvP protection (check `targetUuid != null`), entity protection in claimed territory, safe zones.
 
 **Note:** Deny messages are sent to the **attacker**, not the target.
+
+---
+
+### Slot 27: `projectile_launch`
+
+Intercepts player-initiated projectile launches.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateProjectileLaunch` | `int evaluateProjectileLaunch(UUID playerUuid, String worldName, int x, int y, int z)` | verdict int |
+
+**Intercepted actions:** Projectile spawning via `ProjectileModule.spawnProjectile()`. Only player-initiated projectiles are checked — non-player projectiles (mob AI, etc.) pass through.
+
+**Note:** Currently uses silent deny only (no `fetchProjectileLaunchDenyReason` method). Position is the projectile launch origin.
+
+**Use cases:** Prevent ranged attacks in safe zones. Block projectile launches in protected territory.
 
 ---
 
@@ -257,6 +344,37 @@ Overrides player respawn location. This is a **value hook** — it returns overr
 **Use cases:** Respawn at faction home when dying in claimed territory. Respawn at zone-defined spawn point. Respawn at nearest ally base.
 
 **Note:** This is the only hook besides `interaction_log` that does not use the standard verdict protocol.
+
+---
+
+### Slot 26: `prefab_spawn`
+
+Intercepts prefab entity spawning from save data.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluatePrefabSpawn` | `int evaluatePrefabSpawn(String worldName, int x, int y, int z)` | verdict int (0 or 2 only) |
+
+**Intercepted actions:** Entity addition via `Store.addEntity()` when the reason is `LOAD`. Only fires for entities being loaded from persistent storage, not for freshly spawned entities.
+
+**Note:** No player context — only returns 0 (allow) or 2 (silent deny). Position may be approximate (0,0,0) if entity position is unavailable during load.
+
+**Use cases:** Prevent unwanted entity restoration in protected regions. Block entity loading in purged territories.
+
+---
+
+### Slot 28: `mount`
+
+Intercepts entity mount/ride interactions.
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `evaluateMount` | `int evaluateMount(UUID playerUuid, String worldName, int x, int y, int z)` | verdict int |
+| `fetchMountDenyReason` | `String fetchMountDenyReason(UUID playerUuid, String worldName, int x, int y, int z)` | deny message or null |
+
+**Intercepted actions:** Mount entity interactions via `DamageEntityInteraction.firstRun()`. Position is the mount entity's location.
+
+**Use cases:** Prevent outsiders from riding mounts in claimed territory. Restrict mount usage in safe zones.
 
 ---
 

@@ -133,3 +133,64 @@ if (bridge != null) {
     bridge.set(0, null); // Remove block_break hook
 }
 ```
+
+## NPC Role Context
+
+When the `use` hook (slot 20) fires for NPC interactions, HyperProtect-Mixin extracts the NPC's role name via reflection and stores it in a system property:
+
+```java
+public int evaluateUse(UUID playerUuid, String worldName, int x, int y, int z) {
+    // Read NPC role context (set by SimpleInstantInteractionGate)
+    String npcRole = (String) System.getProperties().remove("hyperprotect.context.npc_role");
+
+    if (npcRole != null) {
+        // Classify: is this a tameable creature or a shop/quest NPC?
+        if (isTameableRole(npcRole)) {
+            return checkTamePermission(playerUuid, worldName, x, y, z);
+        } else {
+            return checkInteractPermission(playerUuid, worldName, x, y, z);
+        }
+    }
+    return 0; // ALLOW
+}
+```
+
+The `remove()` call atomically reads and clears the context property.
+
+## Block Type Context
+
+When the `use`, `block_place`, `hammer`, or other block interaction hooks fire, the block type at the target position is available via system properties:
+
+```java
+public int evaluateUse(UUID playerUuid, String worldName, int x, int y, int z) {
+    String blockId = (String) System.getProperties().remove("hyperprotect.context.block_id");
+    String blockState = (String) System.getProperties().remove("hyperprotect.context.block_state");
+
+    // Use block type for fine-grained protection decisions
+    if ("crafting_bench".equals(blockId)) {
+        return checkBenchPermission(playerUuid, worldName, x, y, z);
+    }
+    return 0; // ALLOW
+}
+```
+
+## Crafting Context Pattern
+
+The `CraftingResourceFilter` (slot 23) uses a `CraftingContext` bridge class with ThreadLocals to pass crafting bench position and player UUID from `BenchPositionCapture` to the hook:
+
+```java
+// CraftingContext stores bench position and player UUID via ThreadLocal
+// BenchPositionCapture sets these when a player opens a crafting bench
+// CraftingResourceFilter reads them when validating recipes
+
+public int evaluateChestAccess(UUID playerUuid, String worldName,
+                                int benchX, int benchY, int benchZ,
+                                int benchX2, int benchY2, int benchZ2) {
+    // benchX/Y/Z = crafting bench position (from CraftingContext ThreadLocal)
+    // playerUuid = crafter's UUID (from CraftingContext ThreadLocal)
+    Territory territory = territories.getTerritoryAt(worldName, benchX, benchY, benchZ);
+    if (territory == null) return 0;
+    if (territory.isMember(playerUuid)) return 0;
+    return 1; // Deny non-members from crafting at this bench
+}
+```

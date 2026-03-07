@@ -43,6 +43,16 @@ public class MarkerSpawnGate {
     private static final MethodType SPAWN_EVAL_TYPE = MethodType.methodType(
             int.class, String.class, int.class, int.class, int.class);
 
+    @Unique
+    private static final MethodType SPAWN_TYPED_TYPE = MethodType.methodType(
+            int.class, String.class, String.class, int.class, int.class, int.class);
+
+    @Unique
+    private static volatile MethodHandle typedHandle;
+
+    @Unique
+    private static volatile boolean typedHandleChecked;
+
     static {
         System.setProperty("hyperprotect.intercept.spawn_marker", "true");
     }
@@ -139,10 +149,56 @@ public class MarkerSpawnGate {
         int y = (int) context.ySpawn;
         int z = (int) context.zSpawn;
 
-        int verdict = (int) ((MethodHandle) cached[1]).invoke(cached[0], worldName, x, y, z);
+        // Try enhanced typed evaluation (new HF with mob type support)
+        String npcType = extractNpcType(context);
+        if (npcType != null && !typedHandleChecked) {
+            try {
+                typedHandle = MethodHandles.publicLookup().findVirtual(
+                    cached[0].getClass(), "evaluateCreatureSpawnTyped", SPAWN_TYPED_TYPE);
+            } catch (NoSuchMethodException e) {
+                // Old HF — no typed method, use position-only
+            } catch (Exception e) {
+                reportFault(e);
+            }
+            typedHandleChecked = true;
+        }
+
+        int verdict;
+        if (npcType != null && typedHandle != null) {
+            verdict = (int) typedHandle.invoke(cached[0], worldName, npcType, x, y, z);
+        } else {
+            verdict = (int) ((MethodHandle) cached[1]).invoke(cached[0], worldName, x, y, z);
+        }
 
         // Fail-open for negative/unknown values
         return verdict < 0 ? 0 : verdict;
+    }
+
+    /**
+     * Extracts the NPC type identifier from a SpawningContext.
+     * Uses the spawnable's class simple name as the type identifier.
+     *
+     * @return type name (e.g. "ZombieSoldier"), or null if unavailable
+     */
+    @Unique
+    private static String extractNpcType(SpawningContext context) {
+        try {
+            var field = context.getClass().getDeclaredField("spawnable");
+            field.setAccessible(true);
+            Object spawnable = field.get(context);
+            if (spawnable != null) {
+                return spawnable.getClass().getSimpleName();
+            }
+        } catch (NoSuchFieldException ignored) {
+            try {
+                var field = context.getClass().getField("spawnable");
+                Object spawnable = field.get(context);
+                if (spawnable != null) {
+                    return spawnable.getClass().getSimpleName();
+                }
+            } catch (Exception ignored2) {}
+        } catch (Exception ignored) {}
+        return null;
     }
 
     @Unique

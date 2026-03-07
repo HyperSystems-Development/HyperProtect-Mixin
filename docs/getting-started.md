@@ -2,14 +2,14 @@
 
 ## What is HyperProtect-Mixin?
 
-HyperProtect-Mixin is a generic server protection hook framework for Hytale. It uses Hyxin mixins to inject 23 interceptors providing 20 protection hooks across building, combat, items, entities, containers, transport, commands, and logging.
+HyperProtect-Mixin is a generic server protection hook framework for Hytale. It uses Hyxin mixins to inject 29 interceptors providing 27 protection hooks across building, combat, items, entities, containers, transport, commands, and logging.
 
 **Any mod** can register hook handlers to control these actions — no compile-time dependency needed.
 
 ## How It Works
 
 1. HyperProtect-Mixin loads as an early plugin (`earlyplugins/`)
-2. It creates a shared `AtomicReferenceArray<Object>(24)` stored in `System.getProperties()` under `"hyperprotect.bridge"`
+2. It creates a shared `AtomicReferenceArray<Object>(30)` stored in `System.getProperties()` under `"hyperprotect.bridge"`
 3. Mixins inject protection checkpoints into server code
 4. Your mod places hook objects at specific slot indices in the bridge array
 5. When a protected action occurs, the mixin calls your handler via cached MethodHandles
@@ -58,8 +58,15 @@ The bridge array uses fixed integer indices for each hook:
 | 20 | `use` | Block state changes and interactions |
 | 21 | `seat` | Block seating (chairs, benches) |
 | 22 | `respawn` | Player respawn location override (value hook) |
+| 23 | `crafting_resource` | Crafting resource validation |
+| 24 | `map_marker` | Map marker visibility filtering |
+| 25 | `fluid_spread` | Non-fire fluid spreading (water, lava) |
+| 26 | `prefab_spawn` | Prefab entity spawn gating |
+| 27 | `projectile_launch` | Projectile launch interception |
+| 28 | `mount` | Mount/ride entity interception |
+| 29 | `barter_trade` | Barter/trade NPC interactions |
 
-> **Note:** The bridge array has 24 elements (indices 0-23). Indices 0-22 are named slots. Index 23 is reserved for future use. Indices 13, 14, and 15 are utility slots (boolean flags and cached MethodHandle), not consumer hooks.
+> **Note:** The bridge array has 30 elements (indices 0-29). Indices 0-29 are named slots. Indices 13, 14, and 15 are utility slots (boolean flags and cached MethodHandle), not consumer hooks.
 
 ## Verdict Protocol
 
@@ -112,7 +119,7 @@ That's it! The block break interceptor will now call your `evaluate()` method be
 
 ## Next Steps
 
-- **[hooks.md](hooks.md)** — Full hook reference (all 20 hooks with method signatures)
+- **[hooks.md](hooks.md)** — Full hook reference (all 27 hooks with method signatures)
 - **[patterns.md](patterns.md)** — Integration patterns (bypass, fail-open, messages)
 - **[feature-detection.md](feature-detection.md)** — Checking which interceptors are loaded
 - **[examples.md](examples.md)** — Complete working examples

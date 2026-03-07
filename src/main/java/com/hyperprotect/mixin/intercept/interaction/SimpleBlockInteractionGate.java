@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
@@ -280,6 +281,21 @@ public abstract class SimpleBlockInteractionGate {
 
                         // Pass interaction class name to hook for debug logging
                         System.getProperties().put("hyperprotect.context.interaction", className);
+
+                        // Extract block type ID from world for debug/classification
+                        try {
+                            BlockType blockType = world.getBlockType(targetBlock);
+                            if (blockType != null) {
+                                String blockId = blockType.getId();
+                                if (blockId != null) {
+                                    System.getProperties().put("hyperprotect.context.block_id", blockId);
+                                }
+                                var state = blockType.getState();
+                                if (state != null) {
+                                    System.getProperties().put("hyperprotect.context.block_state", state.getId());
+                                }
+                            }
+                        } catch (Exception ignored) {}
 
                         int verdict = (int) ((MethodHandle) hook[1]).invoke(
                                 hook[0], playerUuid, worldName, x, y, z);

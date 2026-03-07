@@ -44,10 +44,13 @@ public abstract class FlameTickInterceptor {
     @Unique
     private static final AtomicLong faultCount = new AtomicLong();
 
-    // --- Cached hook (volatile for cross-thread visibility) ---
+    // --- Cached hooks (volatile for cross-thread visibility) ---
 
     @Unique
     private static volatile Object[] hookCache;
+
+    @Unique
+    private static volatile Object[] fluidHookCache;
 
     // --- MethodType for hook resolution ---
 
@@ -133,6 +136,12 @@ public abstract class FlameTickInterceptor {
             return BlockTickStrategy.SLEEP;
         }
 
+        // Water/lava spread check (slot 25)
+        if (!isFlameSource(self) && queryFluidVerdict(world, worldX, worldY, worldZ)) {
+            fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte) 0);
+            return BlockTickStrategy.SLEEP;
+        }
+
         return this.spread(world, tick, accessor, fluidSection, blockSection,
                 fluid, fluidId, fluidLevel, worldX, worldY, worldZ);
     }
@@ -161,6 +170,52 @@ public abstract class FlameTickInterceptor {
             int verdict = (int) ((MethodHandle) hook[1]).invoke(hook[0], worldName, x, y, z);
 
             // Any positive verdict = block fire spread
+            return verdict > ALLOW;
+        } catch (Throwable e) {
+            reportFault(e);
+            return false; // Fail-open
+        }
+    }
+
+    // --- Fluid spread hook (slot 25) ---
+
+    @Unique
+    private static Object[] resolveFluidHook() {
+        Object[] cached = fluidHookCache;
+        Object impl = getBridge(25); // fluid_spread
+        if (impl == null) {
+            fluidHookCache = null;
+            return null;
+        }
+        if (cached != null && cached[0] == impl) {
+            return cached;
+        }
+        try {
+            MethodHandle primary = MethodHandles.publicLookup().findVirtual(
+                impl.getClass(), "evaluateFluidSpread", EVALUATE_TYPE);
+            cached = new Object[] { impl, primary };
+            fluidHookCache = cached;
+            return cached;
+        } catch (Exception e) {
+            reportFault(e);
+            return null;
+        }
+    }
+
+    /**
+     * Queries the fluid spread hook for a verdict.
+     *
+     * @return true if fluid spread should be blocked, false to allow
+     */
+    @Unique
+    private static boolean queryFluidVerdict(World world, int x, int y, int z) {
+        try {
+            Object[] hook = resolveFluidHook();
+            if (hook == null) return false; // No hook = allow (fail-open)
+
+            String worldName = world.getName();
+            int verdict = (int) ((MethodHandle) hook[1]).invoke(hook[0], worldName, x, y, z);
+
             return verdict > ALLOW;
         } catch (Throwable e) {
             reportFault(e);
