@@ -30,6 +30,7 @@
     "interaction.SimpleInstantInteractionGate",
     "interaction.CaptureCrateGate",
     "worldmap.MapMarkerFilter",
+    "worldmap.SharedMarkerFilter",
     "logging.SpawnLogFilter",
     "logging.EntryDesyncFilter",
     "logging.ChainDesyncFilter"
