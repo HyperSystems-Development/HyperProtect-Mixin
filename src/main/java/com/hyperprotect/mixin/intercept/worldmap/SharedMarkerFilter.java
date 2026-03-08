@@ -4,18 +4,17 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.SharedMarkersProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.user.UserMapMarker;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
+import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.protocol.packets.worldmap.MapMarkerComponent;
+import com.hypixel.hytale.protocol.packets.worldmap.PlacedByMarkerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -24,8 +23,8 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * Filters shared map markers based on faction relationships via the map_marker_filter hook (slot 24).
  *
  * <p>{@code SharedMarkersProvider.update()} iterates all user-placed shared markers and sends
- * them to every player without filtering. This mixin replaces the method to check each marker's
- * creator against the viewer's faction relationships before adding it to the collector.
+ * them to every player without filtering. This mixin redirects {@code collector.add(MapMarker)}
+ * to check each marker's creator against the viewer's faction relationships before adding.
  *
  * <p>Uses the same bridge slot (24) as {@link MapMarkerFilter}, but calls a different method:
  * <pre>
@@ -33,7 +32,14 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  *     Verdict: 0 = SHOW, &gt;0 = HIDE
  * </pre>
  *
- * <p>Fail-open: no hook or no creator UUID = show marker.
+ * <p>Extracts creator UUID from the {@code PlacedByMarkerComponent} in the protocol marker's
+ * components array, and position from {@code MapMarker.transform}.
+ *
+ * <p>Fail-open: no hook, no creator UUID, or error = show marker.
+ *
+ * <p>Uses {@code @Redirect} instead of {@code @Inject} to avoid referencing
+ * {@code CallbackInfo} at runtime — the WorldMap thread's classloader does not
+ * have Mixin library classes available.
  */
 @Mixin(SharedMarkersProvider.class)
 public class SharedMarkerFilter {
@@ -101,57 +107,77 @@ public class SharedMarkerFilter {
     }
 
     /**
-     * Inject at HEAD of update() to replace the loop with a filtered version.
-     * Cancels the original method and reimplements the marker iteration with hook checks.
+     * Extracts the creator UUID from a MapMarker's PlacedByMarkerComponent.
+     *
+     * @return the creator UUID, or null if not present
      */
-    @Inject(method = "update", at = @At("HEAD"), cancellable = true, require = 0)
-    private void filterSharedMarkers(World world, Player player, MarkersCollector collector,
-                                     CallbackInfo ci) {
+    @Unique
+    private static UUID extractCreatorUuid(MapMarker marker) {
+        MapMarkerComponent[] components = marker.components;
+        if (components == null) return null;
+        for (MapMarkerComponent component : components) {
+            if (component instanceof PlacedByMarkerComponent placed) {
+                return placed.playerId;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Redirect collector.add(MapMarker) to filter shared markers via the hook.
+     * Each marker passes through the faction relationship check before being added.
+     *
+     * <p>The outer method params (World, Player, MarkersCollector) are appended
+     * after the redirect target's params by Mixin.
+     */
+    @Redirect(
+        method = "update",
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;add(Lcom/hypixel/hytale/protocol/packets/worldmap/MapMarker;)V"
+        ),
+        require = 0
+    )
+    private void filterSharedMarker(MarkersCollector collector, MapMarker marker,
+                                     World world, Player player, MarkersCollector outerCollector) {
         try {
             Object[] hook = resolveHook();
-
-            WorldMarkersResource resource = world.getChunkStore().getStore()
-                    .getResource(WorldMarkersResource.getResourceType());
-            Collection<? extends UserMapMarker> markers = resource.getUserMapMarkers();
-
             if (hook == null) {
-                // No hook — show all markers (original behavior)
-                for (UserMapMarker marker : markers) {
-                    collector.add(marker.toProtocolMarker());
-                }
-                ci.cancel();
+                collector.add(marker); // No hook — show (original behavior)
+                return;
+            }
+
+            UUID creatorUuid = extractCreatorUuid(marker);
+            if (creatorUuid == null) {
+                collector.add(marker); // Unknown creator — show (fail-open)
                 return;
             }
 
             UUID viewerUuid = player.getUuid();
-            String worldName = world.getName();
-
-            for (UserMapMarker marker : markers) {
-                try {
-                    UUID creatorUuid = marker.getCreatedByUuid();
-                    if (creatorUuid == null) {
-                        collector.add(marker.toProtocolMarker()); // Unknown creator — show
-                        continue;
-                    }
-
-                    int verdict = (int) ((MethodHandle) hook[1]).invoke(
-                            hook[0], viewerUuid, creatorUuid, worldName,
-                            marker.getX(), marker.getZ());
-
-                    if (verdict <= 0) {
-                        collector.add(marker.toProtocolMarker()); // SHOW
-                    }
-                    // verdict > 0 = HIDE (don't add marker)
-                } catch (Throwable t) {
-                    reportFault(t);
-                    collector.add(marker.toProtocolMarker()); // Fail-open
-                }
+            if (viewerUuid == null || viewerUuid.equals(creatorUuid)) {
+                collector.add(marker); // Self or unknown viewer — show
+                return;
             }
 
-            ci.cancel();
+            String worldName = world.getName();
+            float x = 0f, z = 0f;
+            try {
+                if (marker.transform != null && marker.transform.position != null) {
+                    x = (float) marker.transform.position.x;
+                    z = (float) marker.transform.position.z;
+                }
+            } catch (Exception ignored) {}
+
+            int verdict = (int) ((MethodHandle) hook[1]).invoke(
+                    hook[0], viewerUuid, creatorUuid, worldName, x, z);
+
+            if (verdict <= 0) {
+                collector.add(marker); // SHOW
+            }
+            // verdict > 0 = HIDE (don't add marker)
         } catch (Throwable t) {
             reportFault(t);
-            // Don't cancel — let original method run as fallback
+            collector.add(marker); // Fail-open: show marker
         }
     }
 }

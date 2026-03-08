@@ -26,7 +26,7 @@ public class HyperProtectConfigPlugin implements IMixinConfigPlugin {
     private static volatile boolean ogDetected = false;
 
     /**
-     * The 14 mixin classes that have NO OrbisGuard equivalent and must always apply.
+     * The 15 mixin classes that have NO OrbisGuard equivalent and must always apply.
      * All other HP mixins conflict with OG and are disabled when OG is present.
      */
     private static final Set<String> SAFE_MIXINS = Set.of(
@@ -43,7 +43,8 @@ public class HyperProtectConfigPlugin implements IMixinConfigPlugin {
             "com.hyperprotect.mixin.intercept.containers.BenchPositionCapture",
             "com.hyperprotect.mixin.intercept.containers.CraftingResourceFilter",
             "com.hyperprotect.mixin.intercept.containers.BarterTradeInterceptor",
-            "com.hyperprotect.mixin.intercept.worldmap.MapMarkerFilter"
+            "com.hyperprotect.mixin.intercept.worldmap.MapMarkerFilter",
+            "com.hyperprotect.mixin.intercept.worldmap.SharedMarkerFilter"
     );
 
     @Override
