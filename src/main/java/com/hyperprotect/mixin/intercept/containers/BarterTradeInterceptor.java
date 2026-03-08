@@ -114,7 +114,7 @@ public class BarterTradeInterceptor {
         cancellable = true,
         require = 0
     )
-    private void gateTrade(Ref<EntityStore> ref, Store<EntityStore> store, Object eventData,
+    private void gateTrade(Ref<EntityStore> ref, Store<EntityStore> store, BarterPage.BarterEventData eventData,
                            CallbackInfo ci) {
         try {
             Object[] hook = resolveHook();

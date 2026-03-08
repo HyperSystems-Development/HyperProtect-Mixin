@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
-
-## [1.2.0] - 2026-03-06
-
-**Server Version:** `2026.02.19-1a311a592`
-
 ### Added
 - **7 new protection hooks** (29 interceptors, 27 hooks total):
   - **CraftingResourceFilter** (slot 23) — gates crafting resource validation at the recipe level, with bench position context from `BenchPositionCapture`
@@ -32,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Multi-signal OrbisGuard detection** — improved `HyperProtectConfigPlugin` to check system properties (`orbisguard.mixins.loaded`), bridge object (`orbisguard.bridge`), and JAR scan fallback for more reliable OG detection
 - `BenchPositionCapture` now stores bench position and player UUID in `CraftingContext` ThreadLocals (previously unused capture data)
+
+### Fixed
+- **BarterTradeInterceptor** — fix `InvalidInjectionException` caused by using `Object` instead of `BarterPage.BarterEventData` as the third parameter in `gateTrade`. This broke NPC role building for any NPC with a barter shop interaction (e.g., Klops_Merchant)
+- **NpcAdditionGate** — rewrite to target specific 7-arg `spawnEntity` method descriptor instead of `method = "*"` which matched all methods in NPCPlugin. Simplified field structure and removed bare `static {}` initializer block that could cause mixin transformation issues
 
 ## [1.1.0] - 2026-02-26
 
