@@ -5,10 +5,10 @@ All notable changes to HyperProtect-Mixin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-03-08
 
 ### Added
-- **7 new protection hooks** (29 interceptors, 27 hooks total):
+- **7 new protection hooks** (30 interceptors, 27 hooks total):
   - **CraftingResourceFilter** (slot 23) — gates crafting resource validation at the recipe level, with bench position context from `BenchPositionCapture`
   - **MapMarkerFilter** (slot 24) — filters world map marker visibility per-player via `OtherPlayersMarkerProvider`
   - **FluidSpread** (slot 25) — intercepts non-fire fluid spreading (water, lava) in `FluidTicker.process()`, extending the existing `FlameTickInterceptor`
@@ -22,18 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Block type context extraction** — `SimpleBlockInteractionGate` extracts `BlockType` ID and state from the world at the target position, stored in `hyperprotect.context.block_id` and `hyperprotect.context.block_state` system properties
 - **SharedMarkerFilter** (slot 24) — filters shared (user-placed) map markers per-viewer based on faction relationships. Extracts creator UUID from `PlacedByMarkerComponent` and checks via the same `filterSharedMarker` hook method on the map_marker_filter bridge slot
 - **SAFE_MIXINS expanded** — 15 unique mixin classes (was 10) for OrbisGuard compatibility mode. All new interceptors have no OG equivalent and are always active
-- Per-interceptor system properties for all 7 new hooks (`hyperprotect.intercept.crafting_resource`, `hyperprotect.intercept.map_marker_filter`, `hyperprotect.intercept.fluid_spread`, `hyperprotect.intercept.prefab_spawn`, `hyperprotect.intercept.projectile_launch`, `hyperprotect.intercept.mount`, `hyperprotect.intercept.barter_trade`)
+- Per-interceptor system properties for all 7 new hooks (`hyperprotect.intercept.crafting_resource`, `hyperprotect.intercept.map_marker_filter`, `hyperprotect.intercept.shared_marker_filter`, `hyperprotect.intercept.fluid_spread`, `hyperprotect.intercept.prefab_spawn`, `hyperprotect.intercept.projectile_launch`, `hyperprotect.intercept.mount`, `hyperprotect.intercept.barter_trade`)
 
 ### Changed
 - **Multi-signal OrbisGuard detection** — improved `HyperProtectConfigPlugin` to check system properties (`orbisguard.mixins.loaded`), bridge object (`orbisguard.bridge`), and JAR scan fallback for more reliable OG detection
 - `BenchPositionCapture` now stores bench position and player UUID in `CraftingContext` ThreadLocals (previously unused capture data)
-
-### Changed
 - **SharedMarkerFilter** — rewritten from `@Inject`+`CallbackInfo` to `@Redirect` on `collector.add(MapMarker)`. The WorldMap thread runs on a separate `TickingThread` whose classloader does not have Mixin library classes — `@Inject` caused `NoClassDefFoundError: CallbackInfo` at runtime. `@Redirect` avoids referencing any Mixin classes in the injected bytecode
 
 ### Fixed
 - **BarterTradeInterceptor** — fix `InvalidInjectionException` caused by using `Object` instead of `BarterPage.BarterEventData` as the third parameter in `gateTrade`. This broke NPC role building for any NPC with a barter shop interaction (e.g., Klops_Merchant)
 - **NpcAdditionGate** — rewrite to target specific 7-arg `spawnEntity` method descriptor instead of `method = "*"` which matched all methods in NPCPlugin. Simplified field structure and removed bare `static {}` initializer block that could cause mixin transformation issues
+- **NpcAdditionGate** — fix log label from `[HyperProtect-Mixins]` to `[HyperProtect]` for consistency, add stack trace printing in catch blocks
+- **totalMixins count** — corrected from 29 to 30 in `HyperProtectConfigPlugin`
 
 ## [1.1.0] - 2026-02-26
 

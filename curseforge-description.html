@@ -1,12 +1,12 @@
 <h2><span style="color: #5b8def;">HyperProtect-Mixin</span> - Server-Level Event Interception for Hytale</h2>
-<p>Intercept. Protect. Extend. <strong>HyperProtect-Mixin</strong> injects <span style="color: #5b8def;">20 protection hooks</span> into the Hytale server via <span style="color: #5b8def;">Hyxin bytecode mixins</span>, exposing them through a <span style="color: #5b8def;">lock-free bridge API</span> that any mod can consume &mdash; no compile-time dependency required.</p>
+<p>Intercept. Protect. Extend. <strong>HyperProtect-Mixin</strong> injects <span style="color: #5b8def;">27 protection hooks</span> into the Hytale server via <span style="color: #5b8def;">Hyxin bytecode mixins</span>, exposing them through a <span style="color: #5b8def;">lock-free bridge API</span> that any mod can consume &mdash; no compile-time dependency required.</p>
 <p>Zero configuration. Fail-open safety. Drop it in and your protection mod handles the rest.</p>
 <p>&nbsp;</p>
 
 <h2><span style="color: #f0b232;">Why HyperProtect-Mixin?</span></h2>
 <ul>
-    <li><strong><span style="color: #f0b232;">20 Protection Hooks</span></strong> - Comprehensive coverage across building, combat, items, entities, containers, transport, commands, and logging</li>
-    <li><strong><span style="color: #f0b232;">22 Mixin Interceptors</span></strong> - Multiple injection points per hook for thorough event capture, with consolidated interaction gates covering 24 interaction types</li>
+    <li><strong><span style="color: #f0b232;">27 Protection Hooks</span></strong> - Comprehensive coverage across building, combat, items, entities, containers, transport, world map, commands, and logging</li>
+    <li><strong><span style="color: #f0b232;">30 Mixin Interceptors</span></strong> - Multiple injection points per hook for thorough event capture, with consolidated interaction gates covering 26 interaction types</li>
     <li><strong><span style="color: #f0b232;">Lock-Free Bridge</span></strong> - <code>AtomicReferenceArray</code> with zero-contention reads &mdash; no ConcurrentHashMap overhead</li>
     <li><strong><span style="color: #f0b232;">Fail-Open Safety</span></strong> - Errors, missing hooks, or negative verdicts always allow actions &mdash; never locks players out</li>
     <li><strong><span style="color: #f0b232;">Zero Configuration</span></strong> - Auto-initializes on server startup. No config files needed.</li>
@@ -26,7 +26,7 @@
     <tbody>
     <tr>
         <td><strong>Hook Count</strong></td>
-        <td><span style="color: #98c379;">20 hooks (23 interceptors)</span></td>
+        <td><span style="color: #98c379;">27 hooks (30 interceptors)</span></td>
         <td>11 hooks</td>
     </tr>
     <tr>
@@ -70,7 +70,7 @@
 
 <h2><span style="color: #5b8def;">Hook Coverage</span></h2>
 
-<h3><span style="color: #d19a66;">Building (7 hooks)</span></h3>
+<h3><span style="color: #d19a66;">Building (8 hooks)</span></h3>
 <ul>
     <li><strong><span style="color: #61afef;">block_break</span></strong> (slot 0) &mdash; Block harvesting and interactive item pickup</li>
     <li><strong><span style="color: #61afef;">explosion</span></strong> (slot 1) &mdash; Explosion block damage</li>
@@ -78,31 +78,37 @@
     <li><strong><span style="color: #61afef;">builder_tools</span></strong> (slot 3) &mdash; Builder tool paste operations</li>
     <li><strong><span style="color: #61afef;">block_place</span></strong> (slot 18) &mdash; Block placement</li>
     <li><strong><span style="color: #61afef;">hammer</span></strong> (slot 19) &mdash; Hammer block cycling (variant rotation)</li>
-    <li><strong><span style="color: #61afef;">use</span></strong> (slot 20) &mdash; Block state changes and interactions (farming, state toggles, general use)</li>
+    <li><strong><span style="color: #61afef;">use</span></strong> (slot 20) &mdash; Block state changes, farming, capture crates, and NPC interactions</li>
+    <li><strong><span style="color: #61afef;">fluid_spread</span></strong> (slot 25) &mdash; Non-fire fluid spreading (water, lava)</li>
 </ul>
 
 <h3><span style="color: #c678dd;">Items (3 hooks)</span></h3>
 <ul>
-    <li><strong><span style="color: #61afef;">item_pickup</span></strong> (slot 4) &mdash; Proximity item pickup</li>
+    <li><strong><span style="color: #61afef;">item_pickup</span></strong> (slot 4) &mdash; Proximity and manual item pickup</li>
     <li><strong><span style="color: #61afef;">death_drop</span></strong> (slot 5) &mdash; Keep-inventory-on-death behavior</li>
     <li><strong><span style="color: #61afef;">durability</span></strong> (slot 6) &mdash; Item durability loss prevention</li>
 </ul>
 
-<h3><span style="color: #56b6c2;">Containers (2 hooks)</span></h3>
+<h3><span style="color: #56b6c2;">Containers (4 hooks)</span></h3>
 <ul>
     <li><strong><span style="color: #61afef;">container_access</span></strong> (slot 7) &mdash; Crafting/workbench access</li>
     <li><strong><span style="color: #61afef;">container_open</span></strong> (slot 17) &mdash; Storage container opening</li>
+    <li><strong><span style="color: #61afef;">crafting_resource</span></strong> (slot 23) &mdash; Crafting resource validation at recipe level</li>
+    <li><strong><span style="color: #61afef;">barter_trade</span></strong> (slot 29) &mdash; Barter/trade NPC interaction filtering</li>
 </ul>
 
-<h3><span style="color: #e06c75;">Combat (1 hook)</span></h3>
+<h3><span style="color: #e06c75;">Combat (2 hooks)</span></h3>
 <ul>
     <li><strong><span style="color: #61afef;">entity_damage</span></strong> (slot 16) &mdash; Player-initiated damage (PvP and PvE)</li>
+    <li><strong><span style="color: #61afef;">projectile_launch</span></strong> (slot 27) &mdash; Projectile launch interception</li>
 </ul>
 
-<h3><span style="color: #98c379;">Entities (2 hooks)</span></h3>
+<h3><span style="color: #98c379;">Entities (4 hooks)</span></h3>
 <ul>
     <li><strong><span style="color: #61afef;">mob_spawn</span></strong> (slot 8) &mdash; NPC/mob spawning (4 interceptors: marker, chunk, NPC, entity load)</li>
     <li><strong><span style="color: #61afef;">respawn</span></strong> (slot 22) &mdash; Player respawn location override (returns coordinates, not verdict)</li>
+    <li><strong><span style="color: #61afef;">prefab_spawn</span></strong> (slot 26) &mdash; Prefab entity spawning from save data</li>
+    <li><strong><span style="color: #61afef;">mount</span></strong> (slot 28) &mdash; Mount/ride entity interactions</li>
 </ul>
 
 <h3><span style="color: #e5c07b;">Transport (3 hooks)</span></h3>
@@ -110,6 +116,11 @@
     <li><strong><span style="color: #61afef;">teleporter</span></strong> (slot 9) &mdash; Teleporter block use</li>
     <li><strong><span style="color: #61afef;">portal</span></strong> (slot 10) &mdash; All portal and instance interactions (6 interaction types)</li>
     <li><strong><span style="color: #61afef;">seat</span></strong> (slot 21) &mdash; Block seating (chairs, benches)</li>
+</ul>
+
+<h3><span style="color: #d19a66;">World Map (1 hook)</span></h3>
+<ul>
+    <li><strong><span style="color: #61afef;">map_marker</span></strong> (slot 24) &mdash; Per-player map marker visibility filtering (player markers + shared markers)</li>
 </ul>
 
 <h3><span style="color: #abb2bf;">Commands &amp; Logging (2 hooks)</span></h3>
@@ -121,7 +132,7 @@
 
 <h2><span style="color: #98c379;">Architecture</span></h2>
 <h3>Bridge Design</h3>
-<p>The bridge is a 24-element <code>AtomicReferenceArray&lt;Object&gt;</code> stored in <code>System.getProperties()</code> under <code>"hyperprotect.bridge"</code>. Consumer mods place hook objects at fixed slot indices; interceptors read from those slots at runtime via cached <code>MethodHandle</code> lookups.</p>
+<p>The bridge is a 30-element <code>AtomicReferenceArray&lt;Object&gt;</code> stored in <code>System.getProperties()</code> under <code>"hyperprotect.bridge"</code>. Consumer mods place hook objects at fixed slot indices; interceptors read from those slots at runtime via cached <code>MethodHandle</code> lookups.</p>
 
 <h3>Verdict Protocol</h3>
 <table>
@@ -198,12 +209,12 @@ bridge.set(0, new Object() {
         return "&amp;#FF5555You cannot break blocks here!";
     }
 });</pre>
-<p>See the <a href="https://github.com/HyperSystems-Development/HyperProtect-Mixin/tree/main/docs" rel="nofollow">full documentation</a> for all 20 hook signatures and integration patterns.</p>
+<p>See the <a href="https://github.com/HyperSystems-Development/HyperProtect-Mixin/tree/main/docs" rel="nofollow">full documentation</a> for all 27 hook signatures and integration patterns.</p>
 <p>&nbsp;</p>
 
 <h2><span style="color: #61afef;">Integration</span></h2>
 <ul>
-    <li><strong><a href="https://www.curseforge.com/hytale/mods/hyperfactions" rel="nofollow">HyperFactions</a></strong> &mdash; Primary consumer. Uses all 20 hooks for territory protection, PvP control, keep inventory, spawn blocking, and more.</li>
+    <li><strong><a href="https://www.curseforge.com/hytale/mods/hyperfactions" rel="nofollow">HyperFactions</a></strong> &mdash; Primary consumer. Uses all 27 hooks for territory protection, PvP control, keep inventory, spawn blocking, map marker filtering, and more.</li>
     <li><strong>Any mod</strong> &mdash; The bridge API is open. Any mod can register hooks at any slot to implement custom protection logic.</li>
 </ul>
 <p>&nbsp;</p>
