@@ -108,10 +108,11 @@ public class NpcAdditionGate {
             int z = (int) Math.floor(position.getZ());
             int verdict = (int) cachedCheckHandle.invoke(hook, worldName, x, y, z);
             return verdict > 0;
-        } catch (Throwable e) {
+        } catch (Throwable t) {
             long count = errorCount.incrementAndGet();
             if (count == 1L || count % 100L == 0L) {
-                System.err.println("[HyperProtect-Mixins] Hook error #" + count + ": " + e.getMessage());
+                System.err.println("[HyperProtect] NpcAdditionGate error #" + count + ": " + t);
+                t.printStackTrace(System.err);
             }
             return false;
         }

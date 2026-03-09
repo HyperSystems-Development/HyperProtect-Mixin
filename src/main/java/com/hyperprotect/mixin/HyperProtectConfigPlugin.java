@@ -60,7 +60,7 @@ public class HyperProtectConfigPlugin implements IMixinConfigPlugin {
 
         if (ogDetected) {
             int safeCount = SAFE_MIXINS.size();
-            int totalMixins = 29; // total mixins in json
+            int totalMixins = 30; // total mixins in json
             System.out.println("[HyperProtect] OrbisGuard-Mixins detected — "
                     + "disabling " + (totalMixins - safeCount) + " conflicting mixins, keeping " + safeCount + " unique mixins");
         } else {
