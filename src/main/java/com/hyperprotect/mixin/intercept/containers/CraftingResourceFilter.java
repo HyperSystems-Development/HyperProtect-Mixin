@@ -1,6 +1,5 @@
 package com.hyperprotect.mixin.intercept.containers;
 
-import com.hyperprotect.mixin.bridge.CraftingContext;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -22,7 +21,9 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * resources from. This mixin intercepts the crafting attempt to check if the player has
  * access to craft at the bench location.
  *
- * <p>Uses {@link BenchPositionCapture#craftingPlayerUuid} for player context.
+ * <p>Reads player UUID and bench coordinates from system-property-backed ThreadLocals
+ * set by {@link BenchPositionCapture}. Uses bootstrap-class types only to avoid
+ * cross-classloader issues.
  *
  * <p>Hook contract (crafting_resource slot):
  * <pre>
@@ -35,6 +36,12 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  */
 @Mixin(CraftingManager.class)
 public class CraftingResourceFilter {
+
+    @Unique
+    private static final String CTX_PLAYER_KEY = "hyperprotect.ctx.craftingPlayerUuid";
+
+    @Unique
+    private static final String CTX_COORDS_KEY = "hyperprotect.ctx.benchCoords";
 
     @Unique
     private static final AtomicLong faultCount = new AtomicLong();
@@ -96,6 +103,30 @@ public class CraftingResourceFilter {
         }
     }
 
+    @Unique
+    @SuppressWarnings("unchecked")
+    private static UUID getCraftingPlayerUuid() {
+        try {
+            Object tl = System.getProperties().get(CTX_PLAYER_KEY);
+            if (tl instanceof ThreadLocal<?>) {
+                return (UUID) ((ThreadLocal<?>) tl).get();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    @Unique
+    @SuppressWarnings("unchecked")
+    private static int[] getBenchCoords() {
+        try {
+            Object tl = System.getProperties().get(CTX_COORDS_KEY);
+            if (tl instanceof ThreadLocal<?>) {
+                return (int[]) ((ThreadLocal<?>) tl).get();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     /**
      * Inject at the head of isValidBenchForRecipe() to check if the player can access
      * the crafting bench resources. If the hook denies, returns false (bench not valid).
@@ -114,10 +145,10 @@ public class CraftingResourceFilter {
             Object[] hook = resolveHook();
             if (hook == null) return;
 
-            UUID playerUuid = CraftingContext.craftingPlayerUuid.get();
+            UUID playerUuid = getCraftingPlayerUuid();
             if (playerUuid == null) return;
 
-            int[] coords = CraftingContext.benchCoords.get();
+            int[] coords = getBenchCoords();
             if (coords == null || coords.length < 3) return;
 
             // Get world name from context property

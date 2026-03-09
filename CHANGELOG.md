@@ -5,6 +5,14 @@ All notable changes to HyperProtect-Mixin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-03-09
+
+### Fixed
+- **Critical: workbench crash (NoClassDefFoundError)** — `BenchPositionCapture` and `CraftingResourceFilter` directly referenced the plugin-classloader `CraftingContext` class from mixin-injected code running in the server classloader, causing `NoClassDefFoundError: com/hyperprotect/mixin/bridge/CraftingContext` and disconnecting players when opening a workbench
+- Replaced direct `CraftingContext` class references with `System.getProperties()`-backed ThreadLocals using bootstrap-class types only (`hyperprotect.ctx.craftingPlayerUuid`, `hyperprotect.ctx.benchCoords`), matching the cross-classloader pattern used by all other interceptors
+- `BenchPositionCapture` redirect now wraps all context capture in try-catch with the original `setBench()` call always executing — workbench opening can never be blocked by a mixin error
+- `CraftingContext` bridge class converted from static fields to method accessors delegating to the same system property keys for non-mixin code compatibility
+
 ## [1.2.0] - 2026-03-08
 
 ### Added
