@@ -213,12 +213,11 @@ Intercepts crafting resource validation at the recipe level.
 
 | Method | Signature | Return |
 |--------|-----------|--------|
-| `evaluateChestAccess` | `int evaluateChestAccess(UUID playerUuid, String worldName, int benchX, int benchY, int benchZ, int benchX2, int benchY2, int benchZ2)` | verdict int |
-| `fetchChestAccessDenyReason` | `String fetchChestAccessDenyReason(UUID playerUuid, String worldName, int benchX, int benchY, int benchZ)` | deny message or null |
+| `evaluateChestAccess` | `boolean evaluateChestAccess(UUID playerUuid, String worldName, int chestX, int chestY, int chestZ, int benchX, int benchY, int benchZ)` | `true` = allow, `false` = deny |
 
 **Intercepted actions:** Crafting resource validation in `CraftingManager.isValidBenchForRecipe()`. Uses bench coordinates captured by `BenchPositionCapture` via the `CraftingContext` bridge class.
 
-**Note:** Player UUID and bench position are provided via ThreadLocal context from `BenchPositionCapture`.
+**Note:** Player UUID and bench position are provided via ThreadLocal context from `BenchPositionCapture`. This hook returns `boolean` instead of the standard `int` verdict.
 
 **Use cases:** Prevent crafting with protected workbenches. Restrict recipe access based on territory ownership.
 
@@ -230,10 +229,10 @@ Intercepts barter/trade NPC interactions.
 
 | Method | Signature | Return |
 |--------|-----------|--------|
-| `evaluateBarterTrade` | `int evaluateBarterTrade(UUID playerUuid, String worldName, int x, int y, int z)` | verdict int |
-| `fetchBarterTradeDenyReason` | `String fetchBarterTradeDenyReason(UUID playerUuid, String worldName, int x, int y, int z)` | deny message or null |
+| `evaluateTrade` | `int evaluateTrade(UUID playerUuid, String worldName, int x, int y, int z)` | verdict int |
+| `fetchTradeDenyReason` | `String fetchTradeDenyReason(UUID playerUuid, String worldName, int x, int y, int z)` | deny message or null |
 
-**Intercepted actions:** Barter/trade interactions with NPCs. Position is the NPC's location.
+**Intercepted actions:** Barter/trade interactions with NPCs. Position is the player's location.
 
 **Use cases:** Restrict NPC trading in claimed territory. Block trading with specific NPCs in safe zones.
 
@@ -243,22 +242,41 @@ Intercepts barter/trade NPC interactions.
 
 ### Slot 24: `map_marker`
 
-Filters world map marker visibility per player.
+Filters world map marker visibility per player. This slot hosts two methods — one for player markers and one for shared markers.
+
+#### Player Markers (MapMarkerFilter)
 
 | Method | Signature | Return |
 |--------|-----------|--------|
-| `evaluateMapMarker` | `int evaluateMapMarker(UUID viewerUuid, String worldName, String markerId, int x, int y, int z)` | verdict int (0 or 2 only) |
+| `filterPlayerMarker` | `int filterPlayerMarker(UUID viewerUuid, UUID targetUuid, String worldName, int x, int y, int z)` | verdict int (0 or 2 only) |
 
-**Intercepted actions:** Map marker rendering in `OtherPlayersMarkerProvider.update()`. Each marker is checked individually before being added to the player's map view.
+**Intercepted actions:** Map marker rendering in `OtherPlayersMarkerProvider.update()`. Each player marker is checked individually before being added to the viewer's map.
 
 **Parameters:**
 - `viewerUuid` — The UUID of the player viewing the map
-- `markerId` — The marker's identifier string
+- `targetUuid` — The UUID of the player whose marker is being checked (extracted from `"Player-{uuid}"` marker ID)
+- `worldName` — The world name
 - `x, y, z` — The marker's world position
 
-**Note:** No messaging — returns 0 (show marker) or 2 (hide marker). The viewer UUID is captured from the enclosing `update()` method via a secondary redirect.
+**Note:** No messaging — returns 0 (show marker) or >0 (hide marker). The viewer UUID is captured from the enclosing `update()` method via a secondary redirect. Self-markers (viewer == target) are never filtered.
 
-**Use cases:** Hide enemy faction markers. Show only allied markers in claimed territory. Filter markers by proximity or permission.
+#### Shared Markers (SharedMarkerFilter)
+
+| Method | Signature | Return |
+|--------|-----------|--------|
+| `filterSharedMarker` | `int filterSharedMarker(UUID viewerUuid, UUID creatorUuid, String worldName, float x, float z)` | verdict int (0 or 2 only) |
+
+**Intercepted actions:** Shared marker rendering in `SharedMarkersProvider.update()`. Each user-placed shared marker is checked before being sent to the viewer.
+
+**Parameters:**
+- `viewerUuid` — The UUID of the player viewing the map
+- `creatorUuid` — The UUID of the player who placed the marker (from `PlacedByMarkerComponent`)
+- `worldName` — The world name
+- `x, z` — The marker's world position (`float` precision, no Y component)
+
+**Note:** No messaging — returns 0 (show) or >0 (hide). Self-markers (viewer == creator) are never filtered. If the hook object does not implement `filterSharedMarker`, all shared markers are shown (fail-open). Uses `float` coordinates instead of `int` since shared markers track 2D map positions.
+
+**Use cases:** Hide enemy faction player and shared markers. Show only allied markers in claimed territory. Filter markers by proximity or permission.
 
 ---
 

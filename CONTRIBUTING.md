@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This guide covers the architecture,
 
 ## Prerequisites
 
-- **Java 21+** (source and target compatibility)
+- **Java 25+** (source and target compatibility)
 - **Gradle** (wrapper included)
 - **Hytale Server** (Early Access) with `--accept-early-plugins` flag
 - **Hyxin** early plugin loader (v0.0.11+)
@@ -26,7 +26,7 @@ Server Event Occurs → Mixin Interceptor Fires → Bridge Reads Hook → Verdic
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `ProtectionBridge` | `bridge/` | `AtomicReferenceArray<Object>(24)` stored in `System.getProperties()` — the cross-classloader bridge |
+| `ProtectionBridge` | `bridge/` | `AtomicReferenceArray<Object>(30)` stored in `System.getProperties()` — the cross-classloader bridge |
 | `HookSlot` | `bridge/` | Eagerly-cached `MethodHandle` wrapper for hook implementations |
 | `FaultReporter` | `bridge/` | Sampled error reporter (logs first + every 100th to prevent flooding) |
 | `ChatFormatter` | `msg/` | `&`-code message formatter with hex color support |
@@ -50,8 +50,8 @@ HyperProtect-Mixin builds a **plain JAR** (no shadow/relocation — mixin JARs d
 Output: `build/libs/HyperProtect-Mixin-<version>.jar`
 
 **Dependencies** (all `compileOnly`):
-- `HytaleServer.jar` — resolved from `libs/`
-- `Hyxin-0.0.11-all.jar` — resolved from `libs/`
+- `HytaleServer` — resolved from Maven (`maven.hytale.com`) or CurseMaven
+- `Hyxin` — resolved from CurseMaven
 - `org.jetbrains:annotations:24.1.0`
 
 ## Testing
@@ -127,7 +127,7 @@ Add the class to `hyperprotect.mixin.json`:
 
 ## Code Style
 
-- **Java 21 features** — records, sealed classes, pattern matching where appropriate
+- **Java 25 features** — records, sealed classes, pattern matching where appropriate
 - **`@NotNull` / `@Nullable`** annotations on public API methods
 - **`ConcurrentHashMap`** for shared mutable state
 - **No raw types** — always use generics
