@@ -209,15 +209,15 @@ Controls workbench/crafting container access.
 
 ### Slot 23: `crafting_resource`
 
-Intercepts crafting resource validation at the recipe level.
+Intercepts crafting resource validation at the recipe level. Checked within `CraftingGateInterceptor`'s `@Redirect` after the slot 7 check passes.
 
 | Method | Signature | Return |
 |--------|-----------|--------|
 | `evaluateChestAccess` | `boolean evaluateChestAccess(UUID playerUuid, String worldName, int chestX, int chestY, int chestZ, int benchX, int benchY, int benchZ)` | `true` = allow, `false` = deny |
 
-**Intercepted actions:** Crafting resource validation in `CraftingManager.isValidBenchForRecipe()`. Uses bench coordinates captured by `BenchPositionCapture` via the `CraftingContext` bridge class.
+**Intercepted actions:** Crafting resource validation in `CraftingManager.craftItem()` via `CraftingGateInterceptor`. Player UUID and bench position are available from `@Shadow` fields and `ComponentAccessor`.
 
-**Note:** Player UUID and bench position are provided via ThreadLocal context from `BenchPositionCapture`. This hook returns `boolean` instead of the standard `int` verdict.
+**Note:** This hook returns `boolean` instead of the standard `int` verdict. Since v1.2.1, this check is integrated into `CraftingGateInterceptor` rather than being a separate mixin class.
 
 **Use cases:** Prevent crafting with protected workbenches. Restrict recipe access based on territory ownership.
 

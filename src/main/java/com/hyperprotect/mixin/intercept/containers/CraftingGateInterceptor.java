@@ -22,19 +22,21 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Intercepts crafting in CraftingManager.craftItem() to check container access.
- * Uses bench position from the CraftingManager shadow fields (x, y, z).
+ * Intercepts crafting in CraftingManager.craftItem() to check container access
+ * and crafting resource permissions.
+ *
+ * <p>Uses bench position from the CraftingManager shadow fields (x, y, z).
  *
  * <p>Uses {@code @Redirect} instead of {@code @Inject} to avoid runtime dependency
  * on {@code CallbackInfo} (not on TransformingClassLoader classpath).
  *
- * <p>Hook contract (container_access slot, index 7):
+ * <p>Checks two hooks:
  * <ul>
- *   <li>Primary: {@code int evaluateCrafting(UUID, String, int, int, int)} — returns verdict</li>
- *   <li>Secondary: {@code String fetchCraftingDenyReason(UUID, String, int, int, int)} — returns deny reason text</li>
+ *   <li><b>Slot 7 (container_access)</b>: {@code int evaluateCrafting(UUID, String, int, int, int)} — verdict</li>
+ *   <li><b>Slot 23 (crafting_resource)</b>: {@code boolean evaluateChestAccess(UUID, String, int, int, int, int, int, int)} — allow/deny</li>
  * </ul>
  *
- * <p>Verdict protocol: 0=ALLOW, 1=DENY_WITH_MESSAGE, 2=DENY_SILENT, 3=DENY_MOD_HANDLES.
+ * <p>Verdict protocol (slot 7): 0=ALLOW, 1=DENY_WITH_MESSAGE, 2=DENY_SILENT, 3=DENY_MOD_HANDLES.
  * Fail-open on error.
  */
 @Mixin(CraftingManager.class)
@@ -63,6 +65,9 @@ public abstract class CraftingGateInterceptor {
     private static volatile Object[] hookCache;
 
     @Unique
+    private static volatile Object[] resourceHookCache;
+
+    @Unique
     private static final MethodType EVALUATE_TYPE = MethodType.methodType(
             int.class, UUID.class, String.class, int.class, int.class, int.class);
 
@@ -70,8 +75,15 @@ public abstract class CraftingGateInterceptor {
     private static final MethodType FETCH_REASON_TYPE = MethodType.methodType(
             String.class, UUID.class, String.class, int.class, int.class, int.class);
 
+    @Unique
+    private static final MethodType RESOURCE_EVALUATE_TYPE = MethodType.methodType(
+            boolean.class, UUID.class, String.class,
+            int.class, int.class, int.class,
+            int.class, int.class, int.class);
+
     static {
         System.setProperty("hyperprotect.intercept.container_access", "true");
+        System.setProperty("hyperprotect.intercept.crafting_resource", "true");
     }
 
     @Unique
@@ -124,6 +136,29 @@ public abstract class CraftingGateInterceptor {
     }
 
     @Unique
+    private static Object[] resolveResourceHook() {
+        Object[] cached = resourceHookCache;
+        Object impl = getBridge(23); // crafting_resource
+        if (impl == null) {
+            resourceHookCache = null;
+            return null;
+        }
+        if (cached != null && cached[0] == impl) {
+            return cached;
+        }
+        try {
+            MethodHandle primary = MethodHandles.publicLookup().findVirtual(
+                impl.getClass(), "evaluateChestAccess", RESOURCE_EVALUATE_TYPE);
+            cached = new Object[] { impl, primary };
+            resourceHookCache = cached;
+            return cached;
+        } catch (Exception e) {
+            reportFault(e);
+            return null;
+        }
+    }
+
+    @Unique
     private static void formatReason(Object[] hook, Player player,
                                      UUID playerUuid, String worldName,
                                      int x, int y, int z) {
@@ -145,7 +180,11 @@ public abstract class CraftingGateInterceptor {
     /**
      * Redirects the isValidBenchForRecipe() call inside craftItem().
      * If the bench is invalid, returns false (original behavior).
-     * If the bench is valid, checks the protection hook before allowing crafting.
+     * If the bench is valid, checks both protection hooks before allowing crafting:
+     * <ol>
+     *   <li>Slot 7 (container_access) — can the player craft at this bench?</li>
+     *   <li>Slot 23 (crafting_resource) — can the player access nearby chests for resources?</li>
+     * </ol>
      */
     @Redirect(
         method = "craftItem",
@@ -156,15 +195,12 @@ public abstract class CraftingGateInterceptor {
                                        Ref<EntityStore> ref,
                                        ComponentAccessor<EntityStore> componentAccessor,
                                        CraftingRecipe recipe) {
-        // Call original bench validation first
-        boolean valid = this.isValidBenchForRecipe(ref, componentAccessor, recipe);
-        if (!valid) return false;
-
-        // Check protection hook
         try {
-            Object[] hook = resolveHook();
-            if (hook == null) return true; // No hook = allow
+            // Call original bench validation first
+            boolean valid = this.isValidBenchForRecipe(ref, componentAccessor, recipe);
+            if (!valid) return false;
 
+            // Check protection hooks
             PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) return true;
 
@@ -177,24 +213,44 @@ public abstract class CraftingGateInterceptor {
 
             UUID playerUuid = playerRef.getUuid();
 
-            int verdict = (int) ((MethodHandle) hook[1]).invoke(
-                    hook[0], playerUuid, worldName,
-                    this.x, this.y, this.z);
+            // Hook slot 7: container_access
+            Object[] hook = resolveHook();
+            if (hook != null) {
+                int verdict = (int) ((MethodHandle) hook[1]).invoke(
+                        hook[0], playerUuid, worldName,
+                        this.x, this.y, this.z);
 
-            if (verdict >= 1 && verdict <= 3) {
-                if (verdict == 1) {
-                    Player player = componentAccessor.getComponent(ref, Player.getComponentType());
-                    if (player != null) {
-                        formatReason(hook, player, playerUuid, worldName,
-                                this.x, this.y, this.z);
+                if (verdict >= 1 && verdict <= 3) {
+                    if (verdict == 1) {
+                        Player player = componentAccessor.getComponent(ref, Player.getComponentType());
+                        if (player != null) {
+                            formatReason(hook, player, playerUuid, worldName,
+                                    this.x, this.y, this.z);
+                        }
                     }
+                    return false; // Deny crafting
                 }
-                return false; // Deny crafting
             }
+
+            // Hook slot 23: crafting_resource
+            Object[] resourceHook = resolveResourceHook();
+            if (resourceHook != null) {
+                boolean allowed = (boolean) ((MethodHandle) resourceHook[1]).invoke(
+                        resourceHook[0], playerUuid, worldName,
+                        this.x, this.y, this.z,
+                        this.x, this.y, this.z);
+                if (!allowed) return false;
+            }
+
+            return true;
         } catch (Throwable t) {
             reportFault(t);
-            // Fail-open: allow crafting
+            // Fail-safe: call original method if possible, otherwise allow
+            try {
+                return this.isValidBenchForRecipe(ref, componentAccessor, recipe);
+            } catch (Throwable ignored) {
+                return true; // Fail-open: allow crafting
+            }
         }
-        return true;
     }
 }

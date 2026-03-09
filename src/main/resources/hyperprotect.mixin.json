@@ -14,7 +14,6 @@
     "items.WearInterceptor",
     "containers.BenchPositionCapture",
     "containers.CraftingGateInterceptor",
-    "containers.CraftingResourceFilter",
     "containers.BarterTradeInterceptor",
     "combat.EntityDamageInterceptor",
     "combat.ProjectileLaunchInterceptor",

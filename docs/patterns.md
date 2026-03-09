@@ -176,21 +176,19 @@ public int evaluateUse(UUID playerUuid, String worldName, int x, int y, int z) {
 
 ## Crafting Context Pattern
 
-The `CraftingResourceFilter` (slot 23) uses a `CraftingContext` bridge class with ThreadLocals to pass crafting bench position and player UUID from `BenchPositionCapture` to the hook:
+Since v1.2.1, the slot 23 (`crafting_resource`) check is integrated directly into `CraftingGateInterceptor`'s `@Redirect` on `craftItem()`. The interceptor has access to bench coordinates via `@Shadow` fields and player UUID via `ComponentAccessor`, so no cross-mixin ThreadLocal context is needed.
+
+`BenchPositionCapture` still stores bench coords and player UUID in system-property-backed ThreadLocals (`hyperprotect.ctx.craftingPlayerUuid`, `hyperprotect.ctx.benchCoords`) for any consumer code that needs them outside the mixin pipeline.
 
 ```java
-// CraftingContext stores bench position and player UUID via ThreadLocal
-// BenchPositionCapture sets these when a player opens a crafting bench
-// CraftingResourceFilter reads them when validating recipes
-
-public int evaluateChestAccess(UUID playerUuid, String worldName,
-                                int benchX, int benchY, int benchZ,
-                                int benchX2, int benchY2, int benchZ2) {
-    // benchX/Y/Z = crafting bench position (from CraftingContext ThreadLocal)
-    // playerUuid = crafter's UUID (from CraftingContext ThreadLocal)
+public boolean evaluateChestAccess(UUID playerUuid, String worldName,
+                                    int benchX, int benchY, int benchZ,
+                                    int benchX2, int benchY2, int benchZ2) {
+    // benchX/Y/Z = crafting bench position (from @Shadow fields)
+    // playerUuid = crafter's UUID (from ComponentAccessor)
     Territory territory = territories.getTerritoryAt(worldName, benchX, benchY, benchZ);
-    if (territory == null) return 0;
-    if (territory.isMember(playerUuid)) return 0;
-    return 1; // Deny non-members from crafting at this bench
+    if (territory == null) return true;  // allow
+    if (territory.isMember(playerUuid)) return true;  // allow
+    return false; // Deny non-members from crafting at this bench
 }
 ```

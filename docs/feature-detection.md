@@ -41,7 +41,7 @@ Properties are organized by the mixin class that sets them. In standalone mode, 
 | `hyperprotect.intercept.block_place` | BlockPlaceInterceptor | `block_place` (18) |
 | `hyperprotect.intercept.respawn` | RespawnInterceptor | `respawn` (22) |
 | `hyperprotect.intercept.capture_crate_entity` | CaptureCrateGate | `use` (20) |
-| `hyperprotect.intercept.crafting_resource` | CraftingResourceFilter | `crafting_resource` (23) |
+| `hyperprotect.intercept.crafting_resource` | CraftingGateInterceptor | `crafting_resource` (23) |
 | `hyperprotect.intercept.map_marker_filter` | MapMarkerFilter | `map_marker` (24) |
 | `hyperprotect.intercept.shared_marker_filter` | SharedMarkerFilter | `map_marker` (24) |
 | `hyperprotect.intercept.fluid_spread` | FlameTickInterceptor | `fluid_spread` (25) |
@@ -130,7 +130,7 @@ When OrbisGuard-Mixins is detected in `earlyplugins/`, `HyperProtectConfigPlugin
 | `BlockPlaceInterceptor` | block_place |
 | `EntityDamageInterceptor` | entity_damage |
 | `RespawnInterceptor` | respawn |
-| `CraftingResourceFilter` | crafting_resource |
+| `CraftingGateInterceptor` | container_access, crafting_resource |
 | `MapMarkerFilter` | map_marker |
 | `ProjectileLaunchInterceptor` | projectile_launch |
 | `MountInterceptor` | mount |
@@ -138,9 +138,9 @@ When OrbisGuard-Mixins is detected in `earlyplugins/`, `HyperProtectConfigPlugin
 | `BarterTradeInterceptor` | barter_trade |
 | `SharedMarkerFilter` | map_marker (shared markers) |
 | `FlameTickInterceptor` | fire_spread, fluid_spread |
-| `BenchPositionCapture` | workbench_context (for crafting_resource) |
+| `BenchPositionCapture` | workbench_context |
 
-In compatible mode, only the properties from these 15 classes are pre-declared.
+In compatible mode, only the properties from these 14 classes are pre-declared.
 
 ## Spawn Startup Behavior
 
