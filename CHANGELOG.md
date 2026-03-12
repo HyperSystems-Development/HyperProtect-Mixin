@@ -5,6 +5,15 @@ All notable changes to HyperProtect-Mixin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+*No changes yet*
+
+## [1.2.2] - 2026-03-11
+
+### Fixed
+- **NPE on /kill in safezone** — redirecting `getGameMode()` instead of `getComponent()` in the respawn interceptor prevents a NullPointerException when players use `/kill` in a protected zone ([#2](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues/2))
+
 ## [1.2.1] - 2026-03-09
 
 ### Fixed
