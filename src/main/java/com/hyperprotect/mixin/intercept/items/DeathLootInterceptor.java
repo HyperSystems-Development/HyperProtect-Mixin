@@ -1,7 +1,6 @@
 package com.hyperprotect.mixin.intercept.items;
 
 import com.hypixel.hytale.component.CommandBuffer;
-import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
@@ -97,48 +96,41 @@ public abstract class DeathLootInterceptor {
     }
 
     /**
-     * Redirect store.getComponent(ref, Player.getComponentType()) in onComponentAdded.
-     * The original method calls this early and null-checks: if null, returns.
-     * Also, the next check is playerComponent.getGameMode() == Creative, which also returns.
-     * We return null when the hook denies, causing the original to exit immediately.
+     * Redirect playerComponent.getGameMode() in onComponentAdded.
+     * The original code has: {@code if (playerComponent.getGameMode() == Creative) return;}
+     * When the hook denies death drops, we return {@link GameMode#Creative} to trigger
+     * that existing early-exit path cleanly — no null returns, no NPE risk.
+     *
+     * <p>Previous approach redirected store.getComponent() and returned null on deny,
+     * but the original code does NOT null-check the result — it immediately calls
+     * .getGameMode(), causing an NPE that leaves DeathComponent stuck on the entity.
      */
     @Redirect(
         method = "onComponentAdded",
         at = @At(value = "INVOKE",
-            target = "Lcom/hypixel/hytale/component/Store;getComponent(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;",
+            target = "Lcom/hypixel/hytale/server/core/entity/entities/Player;getGameMode()Lcom/hypixel/hytale/protocol/GameMode;",
             ordinal = 0)
     )
-    private <S, T extends Component<S>> T gateDeathDrops(Store<S> store, Ref<S> ref,
-                                     com.hypixel.hytale.component.ComponentType<S, T> componentType,
-                                     @Nonnull Ref<EntityStore> entityRef,
-                                     @Nonnull DeathComponent component,
-                                     @Nonnull Store<EntityStore> entityStore,
-                                     @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        // Call the original method
-        @SuppressWarnings("unchecked")
-        T result = store.getComponent(ref, componentType);
-
-        if (result == null) return null; // Let original handle it
+    private GameMode gateDeathDrops(Player player,
+                                    @Nonnull Ref<EntityStore> entityRef,
+                                    @Nonnull DeathComponent component,
+                                    @Nonnull Store<EntityStore> store,
+                                    @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        if (player == null) return GameMode.Creative; // defensive — skip drops safely
 
         try {
             Object[] hook = resolveHook();
-            if (hook == null) return result; // No hook = allow (drop normally)
+            if (hook == null) return player.getGameMode(); // No hook = normal flow
 
-            // Get player context
-            @SuppressWarnings("unchecked")
-            Store<EntityStore> typedStore = (Store<EntityStore>) store;
-            @SuppressWarnings("unchecked")
-            Ref<EntityStore> typedRef = (Ref<EntityStore>) ref;
+            PlayerRef playerRef = store.getComponent(entityRef, PlayerRef.getComponentType());
+            if (playerRef == null) return player.getGameMode();
 
-            PlayerRef playerRef = typedStore.getComponent(typedRef, PlayerRef.getComponentType());
-            if (playerRef == null) return result;
-
-            World world = typedStore.getExternalData().getWorld();
+            World world = store.getExternalData().getWorld();
             String worldName = world != null ? world.getName() : null;
-            if (worldName == null) return result;
+            if (worldName == null) return player.getGameMode();
 
-            TransformComponent transform = typedStore.getComponent(typedRef, TransformComponent.getComponentType());
-            if (transform == null) return result;
+            TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
+            if (transform == null) return player.getGameMode();
 
             Vector3d pos = transform.getPosition();
             UUID playerUuid = playerRef.getUuid();
@@ -149,12 +141,12 @@ public abstract class DeathLootInterceptor {
 
             // Verdict 0 = ALLOW (drop normally), anything else = keep inventory
             if (verdict != 0) {
-                return null; // Return null to trigger early exit — keep inventory
+                return GameMode.Creative; // deny → triggers original early-return
             }
         } catch (Throwable t) {
             reportFault(t);
             // Fail-open: drop items normally
         }
-        return result;
+        return player.getGameMode();
     }
 }
