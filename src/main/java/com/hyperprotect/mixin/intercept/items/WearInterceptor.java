@@ -2,18 +2,23 @@ package com.hyperprotect.mixin.intercept.items;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -22,8 +27,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Intercepts durability decrease checks on Player.canDecreaseItemStackDurability().
- * When the hook denies, returns false to prevent item durability loss.
+ * Intercepts durability changes on Player.updateItemStackDurability().
+ * Redirects the super.updateItemStackDurability() call — returns null
+ * (no transaction = no durability change) when the hook denies.
  *
  * <p>Hook contract (durability slot):
  * <pre>
@@ -93,54 +99,53 @@ public abstract class WearInterceptor {
     }
 
     /**
-     * Overwrite canDecreaseItemStackDurability to add hook check before original logic.
-     * Original: returns playerComponent.gameMode != GameMode.Creative
-     * With hook: if hook denies, return false (prevent durability loss); otherwise original logic.
-     *
-     * @author HyperProtect
-     * @reason Intercept durability decrease for protection hooks
+     * Redirect the super.updateItemStackDurability() call inside Player.updateItemStackDurability().
+     * If the hook denies, return null (no transaction = durability unchanged).
+     * Otherwise, delegate to the original LivingEntity.updateItemStackDurability().
      */
-    @Overwrite
-    public boolean canDecreaseItemStackDurability(@Nonnull Ref<EntityStore> ref,
-                                                   @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        // Reproduce original logic first
-        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
-        boolean originalResult = playerComponent.getGameMode() != GameMode.Creative;
-
-        // If original would deny already, no need to check hook
-        if (!originalResult) return false;
-
-        // Check hook
+    @Redirect(
+        method = "updateItemStackDurability",
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/hypixel/hytale/server/core/entity/LivingEntity;updateItemStackDurability(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;IDLcom/hypixel/hytale/component/ComponentAccessor;)Lcom/hypixel/hytale/server/core/inventory/transaction/ItemStackSlotTransaction;"
+        ),
+        require = 0
+    )
+    @Nullable
+    private ItemStackSlotTransaction interceptUpdateDurability(
+            LivingEntity instance, @Nonnull Ref<EntityStore> ref, @Nonnull ItemStack itemStack,
+            ItemContainer container, int slotId, double durabilityChange,
+            @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         try {
             Object[] hook = resolveHook();
-            if (hook == null) return true; // No hook = allow (original says yes)
+            if (hook != null) {
+                PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef != null) {
+                    World world = ((EntityStore) componentAccessor.getExternalData()).getWorld();
+                    String worldName = world != null ? world.getName() : null;
+                    if (worldName != null) {
+                        TransformComponent transform = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
+                        if (transform != null) {
+                            Vector3d pos = transform.getPosition();
+                            UUID playerUuid = playerRef.getUuid();
 
-            PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef == null) return true;
+                            int verdict = (int) ((MethodHandle) hook[1]).invoke(
+                                    hook[0], playerUuid, worldName,
+                                    (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
 
-            World world = ((EntityStore) componentAccessor.getExternalData()).getWorld();
-            String worldName = world != null ? world.getName() : null;
-            if (worldName == null) return true;
-
-            TransformComponent transform = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
-            if (transform == null) return true;
-
-            Vector3d pos = transform.getPosition();
-            UUID playerUuid = playerRef.getUuid();
-
-            int verdict = (int) ((MethodHandle) hook[1]).invoke(
-                    hook[0], playerUuid, worldName,
-                    (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
-
-            // Verdict 0 = ALLOW, anything else = prevent durability loss
-            if (verdict != 0) {
-                return false;
+                            if (verdict != 0) {
+                                return null; // Deny: no transaction = no durability change
+                            }
+                        }
+                    }
+                }
             }
         } catch (Throwable t) {
             reportFault(t);
             // Fail-open: allow normal durability behavior
         }
-        return true;
+
+        // Allow: call the original LivingEntity implementation
+        return instance.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
     }
 }

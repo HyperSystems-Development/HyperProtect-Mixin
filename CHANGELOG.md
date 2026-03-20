@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Fixed
+- **WearInterceptor rewritten for prerelease** — `Player.canDecreaseItemStackDurability()` was removed; rewrote from `@Overwrite` to `@Redirect` on `LivingEntity.updateItemStackDurability()`, returning null to prevent durability loss when hook denies
+- **BlockPlaceInterceptor updated** — `BlockPlaceUtils.placeBlock()` gained a `quickReplace` boolean parameter; updated redirect target descriptor and pass-through
+- **StateData.getId() removed** — replaced with `getStateForBlock(blockType.getId())` in `SimpleBlockInteractionGate`
+- **Item package paths moved** — `ItemStack`, `ItemContainer`, `ItemStackSlotTransaction` moved to `inventory` subpackages; updated all imports
+
+### Changed
+- **Server version pinning** — manifest `ServerVersion` changed from wildcard `*` to `${serverVersion}` (resolved at build time from Maven), preventing the plugin from loading on incompatible server builds
+- **Build configuration** — `processResources` now expands `serverVersion` into `manifest.json` alongside the existing `version` property
 
 ## [1.2.2] - 2026-03-11
 

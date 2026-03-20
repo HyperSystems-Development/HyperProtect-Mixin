@@ -48,8 +48,9 @@ dependencies {
 processResources {
     def ver = version.toString()
     inputs.property('version', ver)
+    inputs.property('serverVersion', hytaleServerVersion)
     filesMatching('manifest.json') {
-        expand(version: ver)
+        expand(version: ver, serverVersion: hytaleServerVersion)
     }
 }
 

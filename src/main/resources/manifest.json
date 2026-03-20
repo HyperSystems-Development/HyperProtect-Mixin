@@ -4,7 +4,7 @@
   "Version": "${version}",
   "Description": "Generic server protection hooks via Hyxin mixins — any mod can register hook handlers",
   "Authors": [{"Name": "HyperSystems"}],
-  "ServerVersion": "*",
+  "ServerVersion": "${serverVersion}",
   "Dependencies": {},
   "OptionalDependencies": {},
   "DisabledByDefault": false,
