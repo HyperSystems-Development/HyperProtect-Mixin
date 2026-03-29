@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No changes yet*
+
+## [1.2.3] - 2026-03-29
+
+**Server Version:** `2026.03.26-89796e57b`
+
 ### Fixed
-- **WearInterceptor rewritten for prerelease** — `Player.canDecreaseItemStackDurability()` was removed; rewrote from `@Overwrite` to `@Redirect` on `LivingEntity.updateItemStackDurability()`, returning null to prevent durability loss when hook denies
+- **WearInterceptor rewritten** — `Player.canDecreaseItemStackDurability()` was removed; rewrote from `@Overwrite` to `@Redirect` on `LivingEntity.updateItemStackDurability()`, returning null to prevent durability loss when hook denies
 - **BlockPlaceInterceptor updated** — `BlockPlaceUtils.placeBlock()` gained a `quickReplace` boolean parameter; updated redirect target descriptor and pass-through
 - **StateData.getId() removed** — replaced with `getStateForBlock(blockType.getId())` in `SimpleBlockInteractionGate`
 - **Item package paths moved** — `ItemStack`, `ItemContainer`, `ItemStackSlotTransaction` moved to `inventory` subpackages; updated all imports

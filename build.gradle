@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.hyperprotect'
-version = '1.2.2'
+version = '1.2.3'
 
 // Resolve Hytale server version from Maven
 def hytaleChannel = (findProperty('hytale_channel') ?: 'release').toString().trim()
