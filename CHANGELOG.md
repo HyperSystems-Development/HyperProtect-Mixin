@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No changes yet*
+### Fixed
+- **Server API 2026.03.26 compatibility** — updated all interceptors for breaking API changes:
+  - `BlockPlaceInterceptor`: updated `@Redirect` target descriptor and pass-through for new `boolean quickReplace` parameter on `BlockPlaceUtils.placeBlock()`
+  - `SimpleBlockInteractionGate`: replaced removed `StateData.getId()` with `state.toString()` for debug context
+  - `WearInterceptor`: migrated from `@Overwrite` on `Player` to `@Redirect` on `ItemUtils.canDecreaseItemStackDurability()` — method moved from Player to ItemUtils; uses `@Redirect` on `getGameMode()` to avoid `CallbackInfoReturnable` classloader crash
 
 ## [1.2.2] - 2026-03-11
 

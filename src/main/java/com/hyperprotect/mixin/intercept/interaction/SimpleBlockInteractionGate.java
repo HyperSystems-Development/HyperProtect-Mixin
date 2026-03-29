@@ -292,7 +292,7 @@ public abstract class SimpleBlockInteractionGate {
                                 }
                                 var state = blockType.getState();
                                 if (state != null) {
-                                    System.getProperties().put("hyperprotect.context.block_state", state.getId());
+                                    System.getProperties().put("hyperprotect.context.block_state", state.toString());
                                 }
                             }
                         } catch (Exception ignored) {}

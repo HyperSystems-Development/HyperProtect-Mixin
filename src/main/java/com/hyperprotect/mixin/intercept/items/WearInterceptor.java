@@ -3,6 +3,7 @@ package com.hyperprotect.mixin.intercept.items;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -10,8 +11,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import javax.annotation.Nonnull;
 import java.lang.invoke.MethodHandle;
@@ -22,8 +24,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Intercepts durability decrease checks on Player.canDecreaseItemStackDurability().
- * When the hook denies, returns false to prevent item durability loss.
+ * Intercepts durability decrease checks on ItemUtils.canDecreaseItemStackDurability().
+ * When the hook denies, returns GameMode.Creative to trick the original logic into
+ * returning false (preventing durability loss).
+ *
+ * <p>Uses {@code @Redirect} on {@code Player.getGameMode()} to avoid runtime dependency
+ * on {@code CallbackInfoReturnable} (not on TransformingClassLoader classpath).
  *
  * <p>Hook contract (durability slot):
  * <pre>
@@ -33,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  *
  * <p>No messaging needed — durability is a passive mechanic.
  */
-@Mixin(Player.class)
+@Mixin(ItemUtils.class)
 public abstract class WearInterceptor {
 
     @Unique
@@ -93,38 +99,39 @@ public abstract class WearInterceptor {
     }
 
     /**
-     * Overwrite canDecreaseItemStackDurability to add hook check before original logic.
-     * Original: returns playerComponent.gameMode != GameMode.Creative
-     * With hook: if hook denies, return false (prevent durability loss); otherwise original logic.
+     * Redirects Player.getGameMode() inside canDecreaseItemStackDurability().
+     * If the hook denies, returns GameMode.Creative to make the original
+     * {@code playerComponent.getGameMode() != GameMode.Creative} check return false.
      *
-     * @author HyperProtect
-     * @reason Intercept durability decrease for protection hooks
+     * <p>The method parameters (ref, accessor) are captured from the enclosing
+     * static method's arguments via the redirect.
      */
-    @Overwrite
-    public boolean canDecreaseItemStackDurability(@Nonnull Ref<EntityStore> ref,
-                                                   @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        // Reproduce original logic first
-        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
-        boolean originalResult = playerComponent.getGameMode() != GameMode.Creative;
+    @Redirect(
+        method = "canDecreaseItemStackDurability",
+        at = @At(value = "INVOKE",
+            target = "Lcom/hypixel/hytale/server/core/entity/entities/Player;getGameMode()Lcom/hypixel/hytale/protocol/GameMode;")
+    )
+    private static GameMode redirectGetGameMode(Player playerComponent,
+                                                 @Nonnull Ref<EntityStore> ref,
+                                                 @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        GameMode realMode = playerComponent.getGameMode();
 
-        // If original would deny already, no need to check hook
-        if (!originalResult) return false;
+        // If already Creative, no need to check hook — durability won't decrease anyway
+        if (realMode == GameMode.Creative) return realMode;
 
-        // Check hook
         try {
             Object[] hook = resolveHook();
-            if (hook == null) return true; // No hook = allow (original says yes)
+            if (hook == null) return realMode; // No hook = allow original behavior
 
             PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef == null) return true;
+            if (playerRef == null) return realMode;
 
             World world = ((EntityStore) componentAccessor.getExternalData()).getWorld();
             String worldName = world != null ? world.getName() : null;
-            if (worldName == null) return true;
+            if (worldName == null) return realMode;
 
             TransformComponent transform = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
-            if (transform == null) return true;
+            if (transform == null) return realMode;
 
             Vector3d pos = transform.getPosition();
             UUID playerUuid = playerRef.getUuid();
@@ -133,14 +140,14 @@ public abstract class WearInterceptor {
                     hook[0], playerUuid, worldName,
                     (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
 
-            // Verdict 0 = ALLOW, anything else = prevent durability loss
+            // Verdict 0 = ALLOW, anything else = return Creative to prevent durability loss
             if (verdict != 0) {
-                return false;
+                return GameMode.Creative;
             }
         } catch (Throwable t) {
             reportFault(t);
-            // Fail-open: allow normal durability behavior
+            // Fail-open: return real game mode
         }
-        return true;
+        return realMode;
     }
 }

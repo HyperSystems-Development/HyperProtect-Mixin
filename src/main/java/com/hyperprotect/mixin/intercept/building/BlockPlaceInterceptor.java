@@ -155,7 +155,7 @@ public class BlockPlaceInterceptor {
     @Redirect(
         method = "tick0",
         at = @At(value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockPlaceUtils;placeBlock(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Ljava/lang/String;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/protocol/BlockRotation;Lcom/hypixel/hytale/server/core/inventory/Inventory;BZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
+            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockPlaceUtils;placeBlock(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Ljava/lang/String;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/protocol/BlockRotation;Lcom/hypixel/hytale/server/core/inventory/Inventory;BZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;Z)V")
     )
     private void gatePlaceBlock(Ref<EntityStore> ref,
                                 ItemStack itemStack,
@@ -169,7 +169,8 @@ public class BlockPlaceInterceptor {
                                 boolean removeItemInHand,
                                 Ref<ChunkStore> chunkReference,
                                 ComponentAccessor<ChunkStore> chunkStore,
-                                ComponentAccessor<EntityStore> entityStore) {
+                                ComponentAccessor<EntityStore> entityStore,
+                                boolean quickReplace) {
         try {
             Object[] hook = resolveHook();
             if (hook != null) {
@@ -213,6 +214,6 @@ public class BlockPlaceInterceptor {
         // Allowed — call original
         BlockPlaceUtils.placeBlock(ref, itemStack, blockTypeKey, itemContainer,
                 placementNormal, blockPosition, blockRotation, inventory,
-                activeSlot, removeItemInHand, chunkReference, chunkStore, entityStore);
+                activeSlot, removeItemInHand, chunkReference, chunkStore, entityStore, quickReplace);
     }
 }
