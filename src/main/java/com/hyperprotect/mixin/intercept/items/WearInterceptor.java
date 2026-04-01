@@ -31,6 +31,11 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * Redirects the super.updateItemStackDurability() call — returns null
  * (no transaction = no durability change) when the hook denies.
  *
+ * <p>On the allow path, the LivingEntity super logic is inlined directly
+ * rather than calling {@code instance.updateItemStackDurability()}, because
+ * INVOKEVIRTUAL would dispatch back to Player's override and re-trigger
+ * this redirect (infinite recursion → StackOverflowError).
+ *
  * <p>Hook contract (durability slot):
  * <pre>
  *   int evaluateWear(UUID playerUuid, String worldName, int x, int y, int z)
@@ -101,7 +106,12 @@ public abstract class WearInterceptor {
     /**
      * Redirect the super.updateItemStackDurability() call inside Player.updateItemStackDurability().
      * If the hook denies, return null (no transaction = durability unchanged).
-     * Otherwise, delegate to the original LivingEntity.updateItemStackDurability().
+     * Otherwise, inline the LivingEntity super logic directly.
+     *
+     * <p>We cannot call {@code instance.updateItemStackDurability()} on the allow path
+     * because INVOKEVIRTUAL dispatches to Player (which contains this redirect),
+     * causing infinite recursion. Instead we inline LivingEntity's implementation:
+     * {@code itemStack.withIncreasedDurability()} + {@code container.replaceItemStackInSlot()}.
      */
     @Redirect(
         method = "updateItemStackDurability",
@@ -145,7 +155,10 @@ public abstract class WearInterceptor {
             // Fail-open: allow normal durability behavior
         }
 
-        // Allow: call the original LivingEntity implementation
-        return instance.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
+        // Allow: inline LivingEntity.updateItemStackDurability() directly.
+        // Cannot call instance.updateItemStackDurability() — INVOKEVIRTUAL would
+        // dispatch to Player's override and re-enter this redirect.
+        ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
+        return container.replaceItemStackInSlot((short) slotId, itemStack, updatedItemStack);
     }
 }
