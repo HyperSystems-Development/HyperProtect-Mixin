@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [1.2.4] - 2026-04-02
+
+**Server Version:** `2026.03.26-89796e57b`
+
+### Fixed
+- **StackOverflowError in WearInterceptor** — calling `instance.updateItemStackDurability()` on the allow path dispatched via `INVOKEVIRTUAL` back to `Player`'s override, re-triggering the redirect in an infinite loop. Fixed by inlining `LivingEntity.updateItemStackDurability()` directly ([#3](https://github.com/HyperSystems-Development/HyperProtect-Mixin/issues/3))
+
 ## [1.2.3] - 2026-03-29
 
 **Server Version:** `2026.03.26-89796e57b`
