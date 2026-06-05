@@ -134,7 +134,7 @@ public class SharedMarkerFilter {
         method = "update",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;add(Lcom/hypixel/hytale/protocol/packets/worldmap/MapMarker;)V"
+            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;addIgnoreViewDistance(Lcom/hypixel/hytale/protocol/packets/worldmap/MapMarker;)V"
         ),
         require = 0
     )
@@ -143,19 +143,19 @@ public class SharedMarkerFilter {
         try {
             Object[] hook = resolveHook();
             if (hook == null) {
-                collector.add(marker); // No hook — show (original behavior)
+                collector.addIgnoreViewDistance(marker); // No hook — show (original behavior)
                 return;
             }
 
             UUID creatorUuid = extractCreatorUuid(marker);
             if (creatorUuid == null) {
-                collector.add(marker); // Unknown creator — show (fail-open)
+                collector.addIgnoreViewDistance(marker); // Unknown creator — show (fail-open)
                 return;
             }
 
             UUID viewerUuid = player.getUuid();
             if (viewerUuid == null || viewerUuid.equals(creatorUuid)) {
-                collector.add(marker); // Self or unknown viewer — show
+                collector.addIgnoreViewDistance(marker); // Self or unknown viewer — show
                 return;
             }
 
@@ -172,12 +172,12 @@ public class SharedMarkerFilter {
                     hook[0], viewerUuid, creatorUuid, worldName, x, z);
 
             if (verdict <= 0) {
-                collector.add(marker); // SHOW
+                collector.addIgnoreViewDistance(marker); // SHOW
             }
             // verdict > 0 = HIDE (don't add marker)
         } catch (Throwable t) {
             reportFault(t);
-            collector.add(marker); // Fail-open: show marker
+            collector.addIgnoreViewDistance(marker); // Fail-open: show marker
         }
     }
 }

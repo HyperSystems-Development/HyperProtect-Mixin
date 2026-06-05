@@ -133,7 +133,7 @@ public class MapMarkerFilter {
         method = "update",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;addIgnoreViewDistance(Lcom/hypixel/hytale/server/core/universe/world/worldmap/MapMarker;)V"
+            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;addIgnoreViewDistance(Lcom/hypixel/hytale/protocol/packets/worldmap/MapMarker;)V"
         ),
         require = 0
     )
