@@ -5,7 +5,7 @@ import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerItemEntityPickupSystem;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -139,7 +139,7 @@ public abstract class ProximityLootInterceptor {
         method = "tick",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/entity/component/TransformComponent;getPosition()Lcom/hypixel/hytale/math/vector/Vector3d;",
+            target = "Lcom/hypixel/hytale/server/core/modules/entity/component/TransformComponent;getPosition()Lorg/joml/Vector3d;",
             ordinal = 0
         )
     )
@@ -156,7 +156,7 @@ public abstract class ProximityLootInterceptor {
      */
     @Redirect(
         method = "tick",
-        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/component/spatial/SpatialStructure;closest(Lcom/hypixel/hytale/math/vector/Vector3d;)Ljava/lang/Object;")
+        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/component/spatial/SpatialStructure;closest(Lorg/joml/Vector3d;)Ljava/lang/Object;")
     )
     private Object gateAction(SpatialStructure<?> spatialStructure, Vector3d position) {
         Object result = spatialStructure.closest(position);
@@ -197,7 +197,7 @@ public abstract class ProximityLootInterceptor {
 
             int verdict = (int) ((MethodHandle) hook[1]).invoke(
                     hook[0], playerRef.getUuid(), worldName,
-                    itemPos.getX(), itemPos.getY(), itemPos.getZ());
+                    itemPos.x(), itemPos.y(), itemPos.z());
 
             // Any non-zero positive verdict = deny (silent, no messaging for auto pickup)
             if (verdict > ALLOW) {
