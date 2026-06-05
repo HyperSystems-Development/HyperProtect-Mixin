@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.spongepowered.asm.mixin.Mixin;
@@ -159,7 +158,7 @@ public abstract class CraftingGateInterceptor {
     }
 
     @Unique
-    private static void formatReason(Object[] hook, Player player,
+    private static void formatReason(Object[] hook, PlayerRef playerRef,
                                      UUID playerUuid, String worldName,
                                      int x, int y, int z) {
         try {
@@ -170,7 +169,7 @@ public abstract class CraftingGateInterceptor {
             Object fmtHandle = getBridge(15);
             if (fmtHandle instanceof MethodHandle mh) {
                 Message msg = (Message) mh.invoke(raw);
-                player.sendMessage(msg);
+                playerRef.sendMessage(msg);
             }
         } catch (Throwable t) {
             reportFault(t);
@@ -222,11 +221,8 @@ public abstract class CraftingGateInterceptor {
 
                 if (verdict >= 1 && verdict <= 3) {
                     if (verdict == 1) {
-                        Player player = componentAccessor.getComponent(ref, Player.getComponentType());
-                        if (player != null) {
-                            formatReason(hook, player, playerUuid, worldName,
-                                    this.x, this.y, this.z);
-                        }
+                        formatReason(hook, playerRef, playerUuid, worldName,
+                                this.x, this.y, this.z);
                     }
                     return false; // Deny crafting
                 }
