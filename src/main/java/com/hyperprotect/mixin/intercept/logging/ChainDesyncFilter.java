@@ -93,7 +93,7 @@ public class ChainDesyncFilter {
     }
 
     @Redirect(
-        method = "addTempSyncData",
+        method = "putInteractionSyncData",
         at = @At(
             value = "INVOKE",
             target = "Lcom/hypixel/hytale/logger/HytaleLogger;at(Ljava/util/logging/Level;)Lcom/hypixel/hytale/logger/HytaleLogger$Api;"
