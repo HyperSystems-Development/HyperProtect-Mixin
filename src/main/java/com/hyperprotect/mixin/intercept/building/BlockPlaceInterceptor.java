@@ -2,13 +2,11 @@ package com.hyperprotect.mixin.intercept.building;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3i;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.BlockPlaceUtils;
@@ -155,7 +153,7 @@ public class BlockPlaceInterceptor {
     @Redirect(
         method = "tick0",
         at = @At(value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockPlaceUtils;placeBlock(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Ljava/lang/String;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/protocol/BlockRotation;Lcom/hypixel/hytale/server/core/inventory/Inventory;BZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;Z)V")
+            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockPlaceUtils;placeBlock(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Ljava/lang/String;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;Lorg/joml/Vector3i;Lorg/joml/Vector3i;Lcom/hypixel/hytale/protocol/BlockRotation;BZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;ZZZ)V")
     )
     private void gatePlaceBlock(Ref<EntityStore> ref,
                                 ItemStack itemStack,
@@ -164,13 +162,14 @@ public class BlockPlaceInterceptor {
                                 Vector3i placementNormal,
                                 Vector3i blockPosition,
                                 BlockRotation blockRotation,
-                                @Nullable Inventory inventory,
                                 byte activeSlot,
                                 boolean removeItemInHand,
                                 Ref<ChunkStore> chunkReference,
                                 ComponentAccessor<ChunkStore> chunkStore,
                                 ComponentAccessor<EntityStore> entityStore,
-                                boolean quickReplace) {
+                                boolean quickReplace,
+                                boolean quickRetype,
+                                boolean noPhysics) {
         try {
             Object[] hook = resolveHook();
             if (hook != null) {
@@ -182,19 +181,16 @@ public class BlockPlaceInterceptor {
 
                     int verdict = (int) ((MethodHandle) hook[1]).invoke(
                             hook[0], playerUuid, worldName,
-                            blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+                            blockPosition.x(), blockPosition.y(), blockPosition.z());
 
                     if (verdict == 1 || verdict == 2 || verdict == 3) {
                         // Denied — send message if DENY_WITH_MESSAGE
                         if (verdict == 1 && hook.length >= 3 && hook[2] != null) {
                             String reason = (String) ((MethodHandle) hook[2]).invoke(
                                     hook[0], playerUuid, worldName,
-                                    blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
-                            Player player = entityStore.getComponent(ref, Player.getComponentType());
-                            if (player != null) {
-                                Message msg = formatReason(reason);
-                                if (msg != null) player.sendMessage(msg);
-                            }
+                                    blockPosition.x(), blockPosition.y(), blockPosition.z());
+                            Message msg = formatReason(reason);
+                            if (msg != null) playerRef.sendMessage(msg);
                         }
 
                         // Set interaction state to Failed via captured context
@@ -213,7 +209,8 @@ public class BlockPlaceInterceptor {
 
         // Allowed — call original
         BlockPlaceUtils.placeBlock(ref, itemStack, blockTypeKey, itemContainer,
-                placementNormal, blockPosition, blockRotation, inventory,
-                activeSlot, removeItemInHand, chunkReference, chunkStore, entityStore, quickReplace);
+                placementNormal, blockPosition, blockRotation,
+                activeSlot, removeItemInHand, chunkReference, chunkStore, entityStore,
+                quickReplace, quickRetype, noPhysics);
     }
 }

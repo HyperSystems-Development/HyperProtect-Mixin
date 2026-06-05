@@ -2,8 +2,8 @@ package com.hyperprotect.mixin.intercept.building;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
@@ -264,14 +264,14 @@ public abstract class HarvestInterceptor {
                 if (hook != null) {
                     int verdict = (int) ((MethodHandle) hook[1]).invoke(
                             hook[0], playerUuid, worldName,
-                            targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
+                            targetBlock.x(), targetBlock.y(), targetBlock.z());
 
                     if (verdict == DENY_WITH_MESSAGE || verdict == DENY_SILENT || verdict == DENY_MOD_HANDLES) {
                         String reason = null;
                         if (verdict == DENY_WITH_MESSAGE && hook.length >= 3 && hook[2] != null) {
                             reason = (String) ((MethodHandle) hook[2]).invoke(
                                     hook[0], playerUuid, worldName,
-                                    targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
+                                    targetBlock.x(), targetBlock.y(), targetBlock.z());
                         }
                         ctx = context.get();
                         if (ctx != null) {
@@ -291,7 +291,7 @@ public abstract class HarvestInterceptor {
      */
     @Redirect(
         method = "performPickupByInteraction",
-        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils;removeBlock(Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
+        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils;removeBlock(Lorg/joml/Vector3i;Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
     )
     private static void interceptRemoval(Vector3i blockPosition, BlockType blockType,
                                          int setBlockSettings, Ref<ChunkStore> chunkReference,
@@ -304,9 +304,9 @@ public abstract class HarvestInterceptor {
             try {
                 BlockChunk blockChunk = (BlockChunk) chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
                 if (blockChunk != null) {
-                    BlockSection section = blockChunk.getSectionAtBlockY(blockPosition.getY());
+                    BlockSection section = blockChunk.getSectionAtBlockY(blockPosition.y());
                     if (section != null) {
-                        section.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+                        section.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
                     }
                 }
             } catch (Exception ignored) {
@@ -318,7 +318,7 @@ public abstract class HarvestInterceptor {
                     Player player = ctx.actor();
                     Message msg = formatReason(ctx.reason());
                     if (player != null && msg != null) {
-                        player.sendMessage(msg);
+                        player.getPlayerRef().sendMessage(msg);
                     }
                 } catch (Exception ignored) {
                 }
@@ -334,7 +334,7 @@ public abstract class HarvestInterceptor {
      */
     @Redirect(
         method = "performPickupByInteraction",
-        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/server/core/entity/ItemUtils;interactivelyPickupItem(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/math/vector/Vector3d;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
+        at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/server/core/entity/ItemUtils;interactivelyPickupItem(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lorg/joml/Vector3d;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
     )
     private static void interceptCollection(Ref<EntityStore> ref, ItemStack itemStack,
                                             Vector3d origin, ComponentAccessor<EntityStore> componentAccessor) {
@@ -358,18 +358,18 @@ public abstract class HarvestInterceptor {
                 if (hook != null) {
                     int pickupVerdict = (int) ((MethodHandle) hook[1]).invoke(
                             hook[0], playerUuid, worldName,
-                            (int) origin.getX(), (int) origin.getY(), (int) origin.getZ());
+                            (int) origin.x(), (int) origin.y(), (int) origin.z());
 
                     if (pickupVerdict == DENY_WITH_MESSAGE || pickupVerdict == DENY_SILENT || pickupVerdict == DENY_MOD_HANDLES) {
                         // Send message for DENY_WITH_MESSAGE
                         if (pickupVerdict == DENY_WITH_MESSAGE && hook.length >= 3 && hook[2] != null) {
                             String reason = (String) ((MethodHandle) hook[2]).invoke(
                                     hook[0], playerUuid, worldName,
-                                    (int) origin.getX(), (int) origin.getY(), (int) origin.getZ());
+                                    (int) origin.x(), (int) origin.y(), (int) origin.z());
                             Player player = (Player) componentAccessor.getComponent(ref, Player.getComponentType());
                             Message msg = formatReason(reason);
                             if (player != null && msg != null) {
-                                player.sendMessage(msg);
+                                player.getPlayerRef().sendMessage(msg);
                             }
                         }
                         return;

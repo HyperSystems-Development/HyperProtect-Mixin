@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -150,9 +149,8 @@ public abstract class PasteInterceptor {
                         String reason = (String) ((MethodHandle) hook[2]).invoke(
                                 hook[0], playerUuid, worldName,
                                 packet.x, packet.y, packet.z);
-                        Player player = (Player) result;
                         Message msg = formatReason(reason);
-                        if (msg != null) player.sendMessage(msg);
+                        if (msg != null) playerRef.sendMessage(msg);
                     }
                     return null; // Return null to trigger early exit
                 }
