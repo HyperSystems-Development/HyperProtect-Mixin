@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
+## [1.3.0] - 2026-06-05
+
+**Server Version:** `0.5.3`
+
+Hytale **0.5.3** (the "Update 5" release line) carried major internal API changes. This
+release migrates all 29 mixin interceptors to compile and apply cleanly on 0.5.3. Verified
+against the live 0.5.3 server (Hyxin, standalone mode): all 29 mixins active with zero apply
+failures and the bridge initialized.
+
+### Changed
+- **Vectors moved to JOML** — `com.hypixel.hytale.math.vector.Vector3d/3f/3i` → `org.joml.*`;
+  accessors `getX()/getY()/getZ()` → `x()/y()/z()`. Updated imports, redirect descriptors, and
+  `@Shadow`/handler signatures across Harvest, Explosion, BlockPlace, ProximityLoot, DeathLoot,
+  Wear, EntityDamage, ProjectileLaunch, NpcAdditionGate, Mount, Respawn, SimpleBlockInteractionGate,
+  SimpleInstantInteractionGate, and CaptureCrateGate. (`Transform`, `Rotation3f`, and `Box` stay in
+  `com.hypixel.hytale.math.*`.)
+- **`Player` is no longer a `CommandSender`** — `sendMessage(Message)` / `hasPermission(String)`
+  moved to `PlayerRef`; all deny-message paths now route through `PlayerRef`.
+- **Manifest** — `ServerVersion` is templated as `^${serverVersion}` (`^0.5.3`); the 0.5.x
+  SemverRange codec rejects a bare non-zero-patch version.
+
+### Fixed (per interceptor)
+- **ExplosionInterceptor** — the inner `BlockHarvestUtils.performBlockDamage` dropped its leading
+  `LivingEntity` param; rewrote the `method=` and `@At` descriptors and the handler, and now detects
+  sourceless (explosion) block damage via `ref == null` (the 8-arg overload always forwards `ref = null`).
+- **BlockPlaceInterceptor** — `BlockPlaceUtils.placeBlock` is now 15 args: the `Inventory` param was
+  removed and two trailing booleans (`quickRetype`, `noPhysics`) were added next to `quickReplace`, with
+  both block vectors now `org.joml.Vector3i`. Rewrote the redirect descriptor and pass-through.
+- **WearInterceptor** — `Player` no longer overrides `updateItemStackDurability` and the impl moved to
+  the static `ItemUtils.updateItemStackDurability`. Retargeted `@Mixin(LivingEntity)` and redirect that
+  static call; the allow path re-invokes the static impl (no recursion), so the v1.2.4 inlining workaround
+  was removed.
+- **ProjectileLaunchInterceptor** — `ProjectileModule.spawnProjectile` gained a 6-arg `(UUID, …)` overload
+  and the 5-arg one only delegates to it, so the old `method="*"` + 5-arg redirect matched no call site.
+  Retargeted the 6-arg overload and redirect its `commandBuffer.addEntity(holder, SPAWN)` — the point every
+  launch path converges on — reading creator/world/position from the enclosing params.
+- **NpcAdditionGate** — `NPCPlugin.spawnEntity` now takes `org.joml.Vector3dc` + `Rotation3fc` (not
+  `math.vector.Vector3d`/`Vector3f`); updated the `method=` descriptor.
+- **RespawnInterceptor** — `Player.tryUseSpawnPoint`'s 5th parameter changed `Player` → `PlayerRef`;
+  updated the `@Shadow` stub, the `@Redirect` descriptor, and the handler.
+- **MarkerSpawnGate / ChunkSpawnGate** — `SpawningContext.world` is now private; read it via `getWorld()`.
+- **CommandGateInterceptor** — the command sender is now a `PlayerRef` (not a `Player`); match `PlayerRef`,
+  resolve the `Player` component from it to keep the `evaluateCommand(Player, String)` bridge contract
+  unchanged, and message via `PlayerRef`.
+- **MapMarkerFilter** — corrected the `MapMarker` parameter package in the `addIgnoreViewDistance` redirect
+  descriptor (`com.hypixel.hytale.protocol.packets.worldmap.MapMarker`).
+- **SharedMarkerFilter** — `SharedMarkersProvider.update` now emits via `addIgnoreViewDistance` (not `add`);
+  retargeted the `@Redirect` and the handler's re-emit calls.
+- **ChainDesyncFilter** — `InteractionChain.addTempSyncData` was renamed to `putInteractionSyncData`;
+  updated the `method=` selector.
+
+### Notes
+- The 30-slot bridge protocol and verdict contract are unchanged (HyperFactions 0.14.0 consumes them);
+  the OG-coexistence `SAFE_MIXINS` set (14) and `totalMixins = 29` are unchanged.
+- `FlameTickInterceptor`, `BenchPositionCapture`, `EntityLoadGate`, `PrefabSpawnInterceptor`,
+  `SpawnLogFilter`, and `EntryDesyncFilter` required no changes — their descriptors were verified
+  unchanged on 0.5.3 via `javap`.
+
 ## [1.2.4] - 2026-04-02
 
 **Server Version:** `2026.03.26-89796e57b`
