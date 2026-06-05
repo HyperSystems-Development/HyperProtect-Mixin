@@ -2,13 +2,12 @@ package com.hyperprotect.mixin.intercept.entities;
 
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -176,11 +175,8 @@ public abstract class MountInterceptor {
                         if (reason != null && !reason.isEmpty()) {
                             Object fmtHandle = getBridge(15);
                             if (fmtHandle instanceof MethodHandle mh) {
-                                Player player = commandBuffer.getComponent(playerRef, Player.getComponentType());
-                                if (player != null) {
-                                    Message msg = (Message) mh.invoke(reason);
-                                    player.sendMessage(msg);
-                                }
+                                Message msg = (Message) mh.invoke(reason);
+                                pRef.sendMessage(msg);
                             }
                         }
                     } catch (Throwable ignored) {}

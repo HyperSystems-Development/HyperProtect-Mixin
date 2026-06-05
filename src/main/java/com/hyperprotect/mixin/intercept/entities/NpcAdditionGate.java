@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -50,7 +50,7 @@ public class NpcAdditionGate {
     }
 
     @Redirect(
-        method = "spawnEntity(Lcom/hypixel/hytale/component/Store;ILcom/hypixel/hytale/math/vector/Vector3d;Lcom/hypixel/hytale/math/vector/Vector3f;Lcom/hypixel/hytale/server/core/asset/type/model/config/Model;Lcom/hypixel/hytale/function/consumer/TriConsumer;Lcom/hypixel/hytale/function/consumer/TriConsumer;)Lit/unimi/dsi/fastutil/Pair;",
+        method = "spawnEntity(Lcom/hypixel/hytale/component/Store;ILorg/joml/Vector3dc;Lcom/hypixel/hytale/math/vector/Rotation3fc;Lcom/hypixel/hytale/server/core/asset/type/model/config/Model;Lcom/hypixel/hytale/function/consumer/TriConsumer;Lcom/hypixel/hytale/function/consumer/TriConsumer;)Lit/unimi/dsi/fastutil/Pair;",
         at = @At(
             value = "INVOKE",
             target = "Lcom/hypixel/hytale/component/Store;addEntity(Lcom/hypixel/hytale/component/Holder;Lcom/hypixel/hytale/component/AddReason;)Lcom/hypixel/hytale/component/Ref;"
@@ -103,9 +103,9 @@ public class NpcAdditionGate {
                     }
                 }
             }
-            int x = (int) Math.floor(position.getX());
-            int y = (int) Math.floor(position.getY());
-            int z = (int) Math.floor(position.getZ());
+            int x = (int) Math.floor(position.x());
+            int y = (int) Math.floor(position.y());
+            int z = (int) Math.floor(position.z());
             int verdict = (int) cachedCheckHandle.invoke(hook, worldName, x, y, z);
             return verdict > 0;
         } catch (Throwable t) {
