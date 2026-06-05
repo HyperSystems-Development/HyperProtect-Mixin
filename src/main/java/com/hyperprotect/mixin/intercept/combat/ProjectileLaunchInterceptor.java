@@ -1,8 +1,10 @@
 package com.hyperprotect.mixin.intercept.combat;
 
+import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.modules.projectile.config.ProjectileConfig;
@@ -97,19 +99,30 @@ public class ProjectileLaunchInterceptor {
     }
 
     /**
-     * Redirect spawnProjectile to gate projectile launches through the hook.
-     * Returns null to indicate the projectile should not be spawned.
+     * Gate projectile launches by redirecting the {@code commandBuffer.addEntity(holder, SPAWN)}
+     * call inside the 6-arg {@code ProjectileModule.spawnProjectile(UUID, ...)} overload — the
+     * point where all launch paths converge to create the projectile entity. Both the 5-arg
+     * overload and direct callers (e.g. ProjectileInteraction) funnel through this method, so
+     * redirecting the entity creation here catches every launch. Returning null skips entity
+     * creation (the projectile is not spawned); the launching method ignores the returned ref
+     * for predicted launches, so this cleanly cancels the projectile.
+     *
+     * <p>The launching player's UUID + world are read from the enclosing method's
+     * {@code creatorRef}/{@code commandBuffer}; the spawn position from {@code position}.
      */
     @Redirect(
-        method = "*",
+        method = "spawnProjectile(Ljava/util/UUID;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/CommandBuffer;Lcom/hypixel/hytale/server/core/modules/projectile/config/ProjectileConfig;Lorg/joml/Vector3d;Lorg/joml/Vector3d;)Lcom/hypixel/hytale/component/Ref;",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/projectile/ProjectileModule;spawnProjectile(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/CommandBuffer;Lcom/hypixel/hytale/server/core/modules/projectile/config/ProjectileConfig;Lcom/hypixel/hytale/math/vector/Vector3d;Lcom/hypixel/hytale/math/vector/Vector3d;)Lcom/hypixel/hytale/component/Ref;"
+            target = "Lcom/hypixel/hytale/component/CommandBuffer;addEntity(Lcom/hypixel/hytale/component/Holder;Lcom/hypixel/hytale/component/AddReason;)Lcom/hypixel/hytale/component/Ref;"
         ),
         require = 0
     )
-    private static Ref<EntityStore> gateProjectileLaunch(
-            ProjectileModule module,
+    private Ref<EntityStore> gateProjectileLaunch(
+            CommandBuffer<EntityStore> buffer,
+            Holder<EntityStore> holder,
+            AddReason reason,
+            UUID predictionId,
             Ref<EntityStore> creatorRef,
             CommandBuffer<EntityStore> commandBuffer,
             ProjectileConfig config,
@@ -119,10 +132,10 @@ public class ProjectileLaunchInterceptor {
         try {
             Object[] hook = resolveHook();
             if (hook == null) {
-                return module.spawnProjectile(creatorRef, commandBuffer, config, position, direction);
+                return buffer.addEntity(holder, reason);
             }
 
-            // Get creator's player UUID
+            // Get creator's player UUID + world
             UUID playerUuid = null;
             String worldName = null;
             try {
@@ -140,7 +153,7 @@ public class ProjectileLaunchInterceptor {
 
             // Only gate player-launched projectiles
             if (playerUuid == null || worldName == null) {
-                return module.spawnProjectile(creatorRef, commandBuffer, config, position, direction);
+                return buffer.addEntity(holder, reason);
             }
 
             int x = (int) position.x;
@@ -151,13 +164,13 @@ public class ProjectileLaunchInterceptor {
                     hook[0], playerUuid, worldName, x, y, z);
 
             if (verdict > 0) {
-                return null; // DENY — don't spawn projectile
+                return null; // DENY — don't create the projectile entity
             }
         } catch (Throwable t) {
             reportFault(t);
             // Fail-open: allow launch
         }
 
-        return module.spawnProjectile(creatorRef, commandBuffer, config, position, direction);
+        return buffer.addEntity(holder, reason);
     }
 }
