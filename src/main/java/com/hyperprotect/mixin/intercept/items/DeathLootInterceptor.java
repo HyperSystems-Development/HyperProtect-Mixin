@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -137,7 +137,7 @@ public abstract class DeathLootInterceptor {
 
             int verdict = (int) ((MethodHandle) hook[1]).invoke(
                     hook[0], playerUuid, worldName,
-                    (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
+                    (int) pos.x(), (int) pos.y(), (int) pos.z());
 
             // Verdict 0 = ALLOW (drop normally), anything else = keep inventory
             if (verdict != 0) {

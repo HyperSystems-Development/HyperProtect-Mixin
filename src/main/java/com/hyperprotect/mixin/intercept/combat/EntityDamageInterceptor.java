@@ -2,13 +2,12 @@ package com.hyperprotect.mixin.intercept.combat;
 
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -113,7 +112,7 @@ public abstract class EntityDamageInterceptor {
     }
 
     @Unique
-    private static void formatReason(Object[] hook, Player player,
+    private static void formatReason(Object[] hook, PlayerRef playerRef,
                                      UUID attackerUuid, UUID targetUuid, String worldName,
                                      int x, int y, int z) {
         try {
@@ -124,7 +123,7 @@ public abstract class EntityDamageInterceptor {
             Object fmtHandle = getBridge(15);
             if (fmtHandle instanceof MethodHandle mh) {
                 Message msg = (Message) mh.invoke(raw);
-                player.sendMessage(msg);
+                playerRef.sendMessage(msg);
             }
         } catch (Throwable t) {
             reportFault(t);
@@ -197,10 +196,7 @@ public abstract class EntityDamageInterceptor {
 
             if (verdict == 1 || verdict == 2 || verdict == 3) {
                 if (verdict == 1) {
-                    Player player = commandBuffer.getComponent(attackerRef, Player.getComponentType());
-                    if (player != null) {
-                        formatReason(hook, player, attackerUuid, targetUuid, worldName, x, y, z);
-                    }
+                    formatReason(hook, attackerPlayerRef, attackerUuid, targetUuid, worldName, x, y, z);
                 }
                 context.getState().state = InteractionState.Failed;
                 return null; // Return null to trigger the existing null-check early exit in tick0

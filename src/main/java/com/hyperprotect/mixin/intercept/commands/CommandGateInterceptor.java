@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -102,7 +103,7 @@ public abstract class CommandGateInterceptor {
     }
 
     @Unique
-    private static void formatReason(Object[] hook, Player player, String commandString) {
+    private static void formatReason(Object[] hook, Player player, PlayerRef playerRef, String commandString) {
         try {
             if (hook.length < 3 || hook[2] == null) return;
             String raw = (String) ((MethodHandle) hook[2]).invoke(hook[0], player, commandString);
@@ -110,7 +111,7 @@ public abstract class CommandGateInterceptor {
             Object fmtHandle = getBridge(15);
             if (fmtHandle instanceof MethodHandle mh) {
                 Message msg = (Message) mh.invoke(raw);
-                player.sendMessage(msg);
+                playerRef.sendMessage(msg);
             }
         } catch (Throwable t) {
             reportFault(t);
@@ -143,9 +144,15 @@ public abstract class CommandGateInterceptor {
         // Always perform the real null check first
         Objects.requireNonNull(commandSender, message);
 
-        // Only gate player commands
-        if (!(sender instanceof Player player)) {
-            return commandSender; // Console commands pass through
+        // Only gate player commands. In 0.5.3 the command sender is a PlayerRef
+        // (Player is no longer a CommandSender); resolve the Player component so the
+        // bridge hook contract evaluateCommand(Player, String) stays unchanged.
+        if (!(sender instanceof PlayerRef playerRef)) {
+            return commandSender; // Console / non-player senders pass through
+        }
+        Player player = playerRef.getComponent(Player.getComponentType());
+        if (player == null) {
+            return commandSender; // Can't resolve Player — fail-open
         }
 
         try {
@@ -160,7 +167,7 @@ public abstract class CommandGateInterceptor {
             switch (verdict) {
                 case 0 -> { /* ALLOW */ }
                 case 1 -> {
-                    formatReason(hook, player, commandString);
+                    formatReason(hook, player, playerRef, commandString);
                     denied.set(new DeniedResult(CompletableFuture.completedFuture(null)));
                     return commandSender;
                 }

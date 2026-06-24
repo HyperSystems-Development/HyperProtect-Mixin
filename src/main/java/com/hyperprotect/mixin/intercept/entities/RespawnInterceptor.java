@@ -6,7 +6,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerRespawnPointData;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -69,7 +69,7 @@ public class RespawnInterceptor {
     @Shadow
     private static CompletableFuture<Transform> tryUseSpawnPoint(
             World world, List<PlayerRespawnPointData> sortedRespawnPoints,
-            int index, Ref<EntityStore> ref, Player playerComponent, Box boundingBox) {
+            int index, Ref<EntityStore> ref, PlayerRef playerComponent, Box boundingBox) {
         throw new AssertionError();
     }
 
@@ -157,9 +157,9 @@ public class RespawnInterceptor {
             TransformComponent transform = typedCa.getComponent(typedRef, TransformComponent.getComponentType());
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
-                deathX = (int) pos.getX();
-                deathY = (int) pos.getY();
-                deathZ = (int) pos.getZ();
+                deathX = (int) pos.x();
+                deathY = (int) pos.y();
+                deathZ = (int) pos.z();
             }
 
             double[] override = (double[]) ((MethodHandle) hook[1]).invoke(
@@ -208,11 +208,11 @@ public class RespawnInterceptor {
     @Redirect(
         method = "getRespawnPosition",
         at = @At(value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/entity/entities/Player;tryUseSpawnPoint(Lcom/hypixel/hytale/server/core/universe/world/World;Ljava/util/List;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/entity/entities/Player;Lcom/hypixel/hytale/math/shape/Box;)Ljava/util/concurrent/CompletableFuture;")
+            target = "Lcom/hypixel/hytale/server/core/entity/entities/Player;tryUseSpawnPoint(Lcom/hypixel/hytale/server/core/universe/world/World;Ljava/util/List;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/universe/PlayerRef;Lcom/hypixel/hytale/math/shape/Box;)Ljava/util/concurrent/CompletableFuture;")
     )
     private static CompletableFuture<Transform> interceptTryUseSpawnPoint(
             World world, List<PlayerRespawnPointData> sortedRespawnPoints,
-            int index, Ref<EntityStore> ref, Player playerComponent, Box boundingBox) {
+            int index, Ref<EntityStore> ref, PlayerRef playerComponent, Box boundingBox) {
         Transform override = respawnOverride.get();
         if (override != null) {
             respawnOverride.remove();

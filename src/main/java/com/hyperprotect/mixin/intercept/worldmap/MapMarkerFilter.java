@@ -114,6 +114,8 @@ public class MapMarkerFilter {
         ),
         require = 0
     )
+    @SuppressWarnings("removal") // getUuid() is the @Redirect target itself (deprecated-for-removal
+                                 // on both channels but still present); the handler must call it.
     private UUID captureViewerUuid(Player player,
                                     World world, Player outerPlayer, MarkersCollector collector) {
         UUID uuid = player.getUuid();
@@ -133,7 +135,7 @@ public class MapMarkerFilter {
         method = "update",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;addIgnoreViewDistance(Lcom/hypixel/hytale/server/core/universe/world/worldmap/MapMarker;)V"
+            target = "Lcom/hypixel/hytale/server/core/universe/world/worldmap/markers/MarkersCollector;addIgnoreViewDistance(Lcom/hypixel/hytale/protocol/packets/worldmap/MapMarker;)V"
         ),
         require = 0
     )

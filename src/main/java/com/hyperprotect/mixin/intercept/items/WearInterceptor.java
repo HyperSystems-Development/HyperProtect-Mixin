@@ -2,8 +2,8 @@ package com.hyperprotect.mixin.intercept.items;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransac
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,14 +27,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Intercepts durability changes on Player.updateItemStackDurability().
- * Redirects the super.updateItemStackDurability() call — returns null
- * (no transaction = no durability change) when the hook denies.
+ * Intercepts durability changes in LivingEntity.updateItemStackDurability().
+ * Redirects the inner {@code ItemUtils.updateItemStackDurability(...)} call —
+ * returns null (no transaction = no durability change) when the hook denies.
  *
- * <p>On the allow path, the LivingEntity super logic is inlined directly
- * rather than calling {@code instance.updateItemStackDurability()}, because
- * INVOKEVIRTUAL would dispatch back to Player's override and re-trigger
- * this redirect (infinite recursion → StackOverflowError).
+ * <p>In 0.5.3 {@code Player} no longer overrides {@code updateItemStackDurability}
+ * and the durability logic moved out of the entity hierarchy into the static
+ * {@code ItemUtils.updateItemStackDurability}. {@code LivingEntity.updateItemStackDurability}
+ * now simply delegates to it, so this mixin targets {@code LivingEntity} and redirects
+ * that static call. The hook only fires for players (non-player entities pass through),
+ * and the allow path re-invokes the static impl — there is no recursion risk.
  *
  * <p>Hook contract (durability slot):
  * <pre>
@@ -44,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  *
  * <p>No messaging needed — durability is a passive mechanic.
  */
-@Mixin(Player.class)
+@Mixin(LivingEntity.class)
 public abstract class WearInterceptor {
 
     @Unique
@@ -104,26 +106,26 @@ public abstract class WearInterceptor {
     }
 
     /**
-     * Redirect the super.updateItemStackDurability() call inside Player.updateItemStackDurability().
+     * Redirect the {@code ItemUtils.updateItemStackDurability(...)} call inside
+     * {@code LivingEntity.updateItemStackDurability()}.
      * If the hook denies, return null (no transaction = durability unchanged).
-     * Otherwise, inline the LivingEntity super logic directly.
+     * Otherwise, invoke the real static durability impl.
      *
-     * <p>We cannot call {@code instance.updateItemStackDurability()} on the allow path
-     * because INVOKEVIRTUAL dispatches to Player (which contains this redirect),
-     * causing infinite recursion. Instead we inline LivingEntity's implementation:
-     * {@code itemStack.withIncreasedDurability()} + {@code container.replaceItemStackInSlot()}.
+     * <p>The redirected call is a plain static method on a different class
+     * ({@code ItemUtils}), so re-invoking it on the allow path cannot re-enter this
+     * redirect — no recursion risk.
      */
     @Redirect(
         method = "updateItemStackDurability",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/entity/LivingEntity;updateItemStackDurability(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;IDLcom/hypixel/hytale/component/ComponentAccessor;)Lcom/hypixel/hytale/server/core/inventory/transaction/ItemStackSlotTransaction;"
+            target = "Lcom/hypixel/hytale/server/core/entity/ItemUtils;updateItemStackDurability(Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/inventory/container/ItemContainer;IDLcom/hypixel/hytale/component/ComponentAccessor;)Lcom/hypixel/hytale/server/core/inventory/transaction/ItemStackSlotTransaction;"
         ),
         require = 0
     )
     @Nullable
     private ItemStackSlotTransaction interceptUpdateDurability(
-            LivingEntity instance, @Nonnull Ref<EntityStore> ref, @Nonnull ItemStack itemStack,
+            @Nonnull Ref<EntityStore> ref, @Nonnull ItemStack itemStack,
             ItemContainer container, int slotId, double durabilityChange,
             @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         try {
@@ -141,7 +143,7 @@ public abstract class WearInterceptor {
 
                             int verdict = (int) ((MethodHandle) hook[1]).invoke(
                                     hook[0], playerUuid, worldName,
-                                    (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
+                                    (int) pos.x(), (int) pos.y(), (int) pos.z());
 
                             if (verdict != 0) {
                                 return null; // Deny: no transaction = no durability change
@@ -155,10 +157,8 @@ public abstract class WearInterceptor {
             // Fail-open: allow normal durability behavior
         }
 
-        // Allow: inline LivingEntity.updateItemStackDurability() directly.
-        // Cannot call instance.updateItemStackDurability() — INVOKEVIRTUAL would
-        // dispatch to Player's override and re-enter this redirect.
-        ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
-        return container.replaceItemStackInSlot((short) slotId, itemStack, updatedItemStack);
+        // Allow: invoke the real static durability impl. Because ItemUtils is a
+        // different class, this does not re-enter the redirect (no recursion).
+        return ItemUtils.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
     }
 }

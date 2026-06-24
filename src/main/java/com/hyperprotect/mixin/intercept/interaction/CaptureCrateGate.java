@@ -3,7 +3,7 @@ package com.hyperprotect.mixin.intercept.interaction;
 import com.hypixel.hytale.builtin.adventure.farming.interactions.UseCaptureCrateInteraction;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -116,7 +116,7 @@ public abstract class CaptureCrateGate {
     }
 
     @Unique
-    private static void sendDenyMessage(Object[] hook, Player player,
+    private static void sendDenyMessage(Object[] hook, PlayerRef playerRef,
                                          UUID playerUuid, String worldName,
                                          int x, int y, int z) {
         try {
@@ -127,7 +127,7 @@ public abstract class CaptureCrateGate {
             Object fmtHandle = getBridge(15);
             if (fmtHandle instanceof MethodHandle mh) {
                 Message msg = (Message) mh.invoke(raw);
-                player.sendMessage(msg);
+                playerRef.sendMessage(msg);
             }
         } catch (Throwable t) {
             reportFault(t);
@@ -176,12 +176,12 @@ public abstract class CaptureCrateGate {
 
                                     int verdict = (int) ((MethodHandle) hook[1]).invoke(
                                             hook[0], playerUuid, worldName,
-                                            (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
+                                            (int) pos.x(), (int) pos.y(), (int) pos.z());
 
                                     if (verdict >= 1 && verdict <= 3) {
                                         if (verdict == 1) {
-                                            sendDenyMessage(hook, player, playerUuid, worldName,
-                                                    (int) pos.getX(), (int) pos.getY(), (int) pos.getZ());
+                                            sendDenyMessage(hook, playerRef, playerUuid, worldName,
+                                                    (int) pos.x(), (int) pos.y(), (int) pos.z());
                                         }
                                         // Return null — existing code sets InteractionState.Failed
                                         return null;

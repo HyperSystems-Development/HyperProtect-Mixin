@@ -142,7 +142,7 @@ public class ChunkSpawnGate {
             }
         }
 
-        String worldName = context.world != null ? context.world.getName() : null;
+        String worldName = context.getWorld() != null ? context.getWorld().getName() : null;
         if (worldName == null) return 0;
 
         int x = (int) context.xSpawn;

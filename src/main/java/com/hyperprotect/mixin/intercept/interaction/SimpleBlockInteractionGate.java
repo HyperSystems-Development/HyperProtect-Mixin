@@ -2,7 +2,7 @@ package com.hyperprotect.mixin.intercept.interaction;
 
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
@@ -220,7 +220,7 @@ public abstract class SimpleBlockInteractionGate {
     }
 
     @Unique
-    private static void sendDenyMessage(Object[] hook, Player player,
+    private static void sendDenyMessage(Object[] hook, PlayerRef playerRef,
                                          UUID playerUuid, String worldName,
                                          int x, int y, int z) {
         try {
@@ -240,7 +240,7 @@ public abstract class SimpleBlockInteractionGate {
             Object fmtHandle = getBridge(15);
             if (fmtHandle instanceof MethodHandle mh) {
                 Message msg = (Message) mh.invoke(raw);
-                player.sendMessage(msg);
+                playerRef.sendMessage(msg);
             }
         } catch (Throwable t) {
             reportFault(t);
@@ -257,7 +257,7 @@ public abstract class SimpleBlockInteractionGate {
     @Redirect(
         method = "tick0",
         at = @At(value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/interaction/interaction/config/client/SimpleBlockInteraction;interactWithBlock(Lcom/hypixel/hytale/server/core/universe/world/World;Lcom/hypixel/hytale/component/CommandBuffer;Lcom/hypixel/hytale/protocol/InteractionType;Lcom/hypixel/hytale/server/core/entity/InteractionContext;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/modules/interaction/interaction/CooldownHandler;)V")
+            target = "Lcom/hypixel/hytale/server/core/modules/interaction/interaction/config/client/SimpleBlockInteraction;interactWithBlock(Lcom/hypixel/hytale/server/core/universe/world/World;Lcom/hypixel/hytale/component/CommandBuffer;Lcom/hypixel/hytale/protocol/InteractionType;Lcom/hypixel/hytale/server/core/entity/InteractionContext;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lorg/joml/Vector3i;Lcom/hypixel/hytale/server/core/modules/interaction/interaction/CooldownHandler;)V")
     )
     private void gateBlockInteraction(SimpleBlockInteraction self,
                                        World world, CommandBuffer<EntityStore> commandBuffer,
@@ -275,9 +275,9 @@ public abstract class SimpleBlockInteractionGate {
                     if (playerRef != null) {
                         UUID playerUuid = playerRef.getUuid();
                         String worldName = world.getName();
-                        int x = targetBlock.getX();
-                        int y = targetBlock.getY();
-                        int z = targetBlock.getZ();
+                        int x = targetBlock.x();
+                        int y = targetBlock.y();
+                        int z = targetBlock.z();
 
                         // Pass interaction class name to hook for debug logging
                         System.getProperties().put("hyperprotect.context.interaction", className);
@@ -305,7 +305,7 @@ public abstract class SimpleBlockInteractionGate {
 
                         if (verdict >= 1 && verdict <= 3) {
                             if (verdict == 1) {
-                                sendDenyMessage(hook, player, playerUuid, worldName, x, y, z);
+                                sendDenyMessage(hook, playerRef, playerUuid, worldName, x, y, z);
                             }
                             context.getState().state = InteractionState.Failed;
                             return; // DENIED

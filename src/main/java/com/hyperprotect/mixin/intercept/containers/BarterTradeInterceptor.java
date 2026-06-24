@@ -3,7 +3,6 @@ package com.hyperprotect.mixin.intercept.containers;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.builtin.adventure.shop.barter.BarterPage;
@@ -169,10 +168,10 @@ public class BarterTradeInterceptor {
                         if (reason != null && !reason.isEmpty()) {
                             Object fmtHandle = getBridge(15);
                             if (fmtHandle instanceof MethodHandle mh) {
-                                Player player = store.getComponent(ref, Player.getComponentType());
-                                if (player != null) {
+                                PlayerRef pr = store.getComponent(ref, PlayerRef.getComponentType());
+                                if (pr != null) {
                                     Message msg = (Message) mh.invoke(reason);
-                                    player.sendMessage(msg);
+                                    pr.sendMessage(msg);
                                 }
                             }
                         }

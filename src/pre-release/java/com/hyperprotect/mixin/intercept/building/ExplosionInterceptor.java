@@ -2,9 +2,8 @@ package com.hyperprotect.mixin.intercept.building;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -72,14 +71,13 @@ public class ExplosionInterceptor {
     }
 
     @Redirect(
-        method = "performBlockDamage(Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;FILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/CommandBuffer;Lcom/hypixel/hytale/component/ComponentAccessor;)Z",
+        method = "performBlockDamage(Lorg/joml/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;FIZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)Z",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils;performBlockDamage(Lcom/hypixel/hytale/server/core/entity/LivingEntity;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;Ljava/lang/String;ZFILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)Z"
+            target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils;performBlockDamage(Lcom/hypixel/hytale/component/Ref;Lorg/joml/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;Ljava/lang/String;ZFIZLcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)Z"
         )
     )
     private static boolean redirectExplosionBlockDamage(
-            @Nullable LivingEntity entity,
             @Nullable Ref<EntityStore> ref,
             @Nonnull Vector3i targetBlockPos,
             @Nullable ItemStack itemStack,
@@ -88,12 +86,18 @@ public class ExplosionInterceptor {
             boolean matchTool,
             float damageScale,
             int setBlockSettings,
+            boolean isExplosion,
             @Nonnull Ref<ChunkStore> chunkReference,
             @Nonnull ComponentAccessor<EntityStore> entityStore,
             @Nonnull ComponentAccessor<ChunkStore> chunkStore) {
 
-        // Only intercept explosions (no entity source)
-        if (entity == null && ref == null) {
+        // On 0.6.0-pre.4 both performBlockDamage overloads gained a trailing boolean
+        // isExplosion (outer/sourceless 8->9 args, inner 11->12 args). The outer convenience
+        // overload this redirect lives in still hard-codes ref=null when delegating to the
+        // inner impl, so a null ref still identifies an explosion-style block break with no
+        // entity source. The captured isExplosion is forwarded to the inner call unchanged
+        // on the allow path.
+        if (ref == null) {
             try {
                 int verdict = queryExplosionVerdict(entityStore, targetBlockPos);
                 if (verdict != 0) {
@@ -106,8 +110,8 @@ public class ExplosionInterceptor {
         }
 
         return BlockHarvestUtils.performBlockDamage(
-                entity, ref, targetBlockPos, itemStack, tool, toolId,
-                matchTool, damageScale, setBlockSettings, chunkReference,
+                ref, targetBlockPos, itemStack, tool, toolId,
+                matchTool, damageScale, setBlockSettings, isExplosion, chunkReference,
                 entityStore, chunkStore);
     }
 
@@ -142,7 +146,7 @@ public class ExplosionInterceptor {
 
         int verdict = (int) ((MethodHandle) cached[1]).invoke(
                 cached[0], world,
-                targetBlockPos.getX(), targetBlockPos.getY(), targetBlockPos.getZ());
+                targetBlockPos.x(), targetBlockPos.y(), targetBlockPos.z());
 
         // Fail-open for negative/unknown values
         return verdict < 0 ? 0 : verdict;
