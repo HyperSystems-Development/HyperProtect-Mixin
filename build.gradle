@@ -28,6 +28,20 @@ java {
     }
 }
 
+// Per-channel mixin variants. A handful of mixin interceptors target Hytale bytecode whose
+// method descriptors differ between the release (0.5.6) and pre-release (0.6.0-pre.4) builds.
+// Mixin @At/@Redirect descriptor strings and handler signatures are baked into source (not
+// templated), so a single literal cannot satisfy both channels. Those interceptors live in
+// src/<channel>/java instead of src/main/java; the matching variant is compiled per build via
+// -Phytale_channel. The mixin config references the same FQCN regardless of channel.
+sourceSets {
+    main {
+        java {
+            srcDir "src/${hytaleChannel}/java"
+        }
+    }
+}
+
 repositories {
     mavenCentral()
     maven { url = "https://maven.hytale.com/${hytaleChannel}" }
