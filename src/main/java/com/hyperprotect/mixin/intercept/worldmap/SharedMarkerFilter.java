@@ -138,6 +138,8 @@ public class SharedMarkerFilter {
         ),
         require = 0
     )
+    @SuppressWarnings("removal") // Entity.getUuid() is @Deprecated(forRemoval) on both channels but
+                                 // still present; no component accessor is available in this handler.
     private void filterSharedMarker(MarkersCollector collector, MapMarker marker,
                                      World world, Player player, MarkersCollector outerCollector) {
         try {

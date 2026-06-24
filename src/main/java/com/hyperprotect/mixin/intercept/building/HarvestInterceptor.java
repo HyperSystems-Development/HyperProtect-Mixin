@@ -293,6 +293,9 @@ public abstract class HarvestInterceptor {
         method = "performPickupByInteraction",
         at = @At(value = "INVOKE", target = "Lcom/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils;removeBlock(Lorg/joml/Vector3i;Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;)V")
     )
+    @SuppressWarnings("removal") // Player.getPlayerRef() is @Deprecated(forRemoval) on both
+                                 // channels but still present; no PlayerRef is resolvable at
+                                 // this redirect site (only a ChunkStore accessor + the actor).
     private static void interceptRemoval(Vector3i blockPosition, BlockType blockType,
                                          int setBlockSettings, Ref<ChunkStore> chunkReference,
                                          ComponentAccessor<ChunkStore> chunkStore) {
@@ -366,10 +369,11 @@ public abstract class HarvestInterceptor {
                             String reason = (String) ((MethodHandle) hook[2]).invoke(
                                     hook[0], playerUuid, worldName,
                                     (int) origin.x(), (int) origin.y(), (int) origin.z());
-                            Player player = (Player) componentAccessor.getComponent(ref, Player.getComponentType());
                             Message msg = formatReason(reason);
-                            if (player != null && msg != null) {
-                                player.getPlayerRef().sendMessage(msg);
+                            // Use the PlayerRef already resolved above (avoids the deprecated
+                            // Player.getPlayerRef() and a redundant component lookup).
+                            if (playerRef != null && msg != null) {
+                                playerRef.sendMessage(msg);
                             }
                         }
                         return;
