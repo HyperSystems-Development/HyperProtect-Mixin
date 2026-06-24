@@ -6,7 +6,7 @@
 Server-level event interception via Hyxin mixins for Hytale. Provides a lock-free bridge API that any mod can use to intercept and control server actions — no compile-time dependency required.
 
 **Version:** 1.3.0
-**Server Version:** `0.5.3`
+**Server Versions:** `0.5.6` (release) · `0.6.0-pre.4` (pre-release) — one JAR per channel
 **Platform:** Hytale Early Access
 **Type:** Hyxin Early Plugin
 **License:** GPLv3
@@ -224,11 +224,19 @@ See [docs/feature-detection.md](docs/feature-detection.md) for the full list.
 - Java 25+
 - Gradle 9.3+ (wrapper included)
 
+The build targets one Hytale channel at a time via `-Phytale_channel` (descriptors for a few
+interceptors differ between channels, so the JARs are not interchangeable):
+
 ```bash
-./gradlew jar
+# Stable (Hytale 0.5.6, manifest ^0.5.6)
+./gradlew clean jar -Phytale_channel=release
+
+# Pre-release (Hytale 0.6.0-pre.4, manifest ^0.6.0-pre.4)
+./gradlew clean jar -Phytale_channel=pre-release
 ```
 
-Output: `build/libs/HyperProtect-Mixin-1.3.0.jar`
+Output: `build/libs/HyperProtect-Mixin-1.3.0.jar` (rename the pre-release build to
+`HyperProtect-Mixin-1.3.0-prerelease.jar` before shipping both).
 
 ---
 
