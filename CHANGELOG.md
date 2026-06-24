@@ -9,16 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No changes yet*
 
-## [1.3.0] - 2026-06-05
+## [1.3.0] - 2026-06-24
 
-**Server Version:** `0.5.3`
+**Server versions:** `0.5.6` (release) · `0.6.0-pre.4` (pre-release)
 
-Hytale **0.5.3** (the "Update 5" release line) carried major internal API changes. This
-release migrates all 29 mixin interceptors to compile and apply cleanly on 0.5.3. Verified
-against the live 0.5.3 server (Hyxin, standalone mode): all 29 mixins active with zero apply
-failures and the bridge initialized.
+This release brings HyperProtect-Mixin onto Hytale's current API from a single codebase and
+ships **two JARs**, built per channel from identical source:
 
-### Changed
+| JAR | Target server | Manifest `ServerVersion` |
+|-----|---------------|--------------------------|
+| `HyperProtect-Mixin-1.3.0.jar` | Hytale **0.5.3 – 0.5.6** (current stable) | `^0.5.6` |
+| `HyperProtect-Mixin-1.3.0-prerelease.jar` | Hytale **0.6.0-pre.4** (pre-release) | `^0.6.0-pre.4` |
+
+> Download the JAR that matches your server. The stable JAR will **not** load on a 0.6.0-pre.4
+> server and the pre-release JAR will **not** load on a 0.5.x server (manifest ranges are
+> enforced strictly). Because the mixin config is `required: true` / `defaultRequire: 1`, any
+> descriptor mismatch is a hard server-start failure — the JARs are not interchangeable.
+
+All 29 interceptors compile and apply on both channels. Apply was verified by exhaustive
+bytecode descriptor-matching (`javap`) against both channel JARs and, for the pre-release
+channel, by loading under Hyxin on a live **0.6.0-pre.4** server: clean boot, bridge
+initialized, zero apply failures (25 mixin targets transformed, including the corrected
+`ProximityLootInterceptor`).
+
+### Changed — Hytale 0.5.x ("Update 5")
 - **Vectors moved to JOML** — `com.hypixel.hytale.math.vector.Vector3d/3f/3i` → `org.joml.*`;
   accessors `getX()/getY()/getZ()` → `x()/y()/z()`. Updated imports, redirect descriptors, and
   `@Shadow`/handler signatures across Harvest, Explosion, BlockPlace, ProximityLoot, DeathLoot,
@@ -27,10 +41,11 @@ failures and the bridge initialized.
   `com.hypixel.hytale.math.*`.)
 - **`Player` is no longer a `CommandSender`** — `sendMessage(Message)` / `hasPermission(String)`
   moved to `PlayerRef`; all deny-message paths now route through `PlayerRef`.
-- **Manifest** — `ServerVersion` is templated as `^${serverVersion}` (`^0.5.3`); the 0.5.x
-  SemverRange codec rejects a bare non-zero-patch version.
+- **Manifest** — `ServerVersion` is templated as `^${serverVersion}`, resolved per channel
+  (`^0.5.6` for the stable JAR, `^0.6.0-pre.4` for the pre-release JAR); the 0.5.x+ SemverRange
+  codec rejects a bare non-zero-patch version.
 
-### Fixed (per interceptor)
+### Fixed (per interceptor) — Hytale 0.5.x
 - **ExplosionInterceptor** — the inner `BlockHarvestUtils.performBlockDamage` dropped its leading
   `LivingEntity` param; rewrote the `method=` and `@At` descriptors and the handler, and now detects
   sourceless (explosion) block damage via `ref == null` (the 8-arg overload always forwards `ref = null`).
@@ -60,12 +75,46 @@ failures and the bridge initialized.
 - **ChainDesyncFilter** — `InteractionChain.addTempSyncData` was renamed to `putInteractionSyncData`;
   updated the `method=` selector.
 
+### Added — Hytale 0.6.0-pre.4 ("Update 6") pre-release support
+Audited every mixin target (`@Mixin`, `method=`, `@At`, `@Shadow`, `@Redirect`) against the
+0.6.0-pre.4 bytecode. Two interceptors needed channel-specific descriptors; the other 27 are
+byte-identical across channels and stay shared in `src/main/java`.
+- **ExplosionInterceptor** — `BlockHarvestUtils.performBlockDamage` gained a trailing
+  `boolean isExplosion` on both overloads in 0.6.0-pre.4 (outer 8→9 args, inner 11→12 args), plus
+  a new 13-arg batch overload. The pre-release variant shifts the `method=` selector, the `@At`
+  INVOKE target, the `@Redirect` handler signature, and the delegate call by that one parameter
+  and forwards `isExplosion` unchanged. (This is also a hard compile error on 0.6.0-pre.4, caught
+  by the build; the release variant is unchanged.)
+- **ProximityLootInterceptor** — `SpatialStructure.closest(Vector3d)` became `closest(Vector3dc)`
+  (the read-only JOML interface) in 0.6.0-pre.4. The pre-release variant retargets the `@At`
+  descriptor and the redirect handler's parameter type. This redirect has no `require=` override,
+  so on a 0.6.0-pre.4 server the old descriptor would match 0 sites and **hard-fail startup** — the
+  compiler cannot catch this; it was caught by bytecode audit and confirmed by the live load-test.
+- **Deprecations** — `Player.getPlayerRef()` and `Entity.getUuid()` are deprecated-for-removal on
+  both channels (still present). HarvestInterceptor's item-pickup deny path now reuses the
+  already-resolved `PlayerRef`; the remaining unavoidable sites (redirect targets / handlers with no
+  component accessor) are `@SuppressWarnings("removal")`. Source-only, so the mixin bytecode is
+  unchanged. Both channels now compile with no `[removal]` warnings.
+
+### Build
+- **Per-channel mixin source sets** — `build.gradle` adds `src/${hytale_channel}/java` to the main
+  source set. Only the two descriptor-drifting interceptors live there (`src/release/java` +
+  `src/pre-release/java`); every other interceptor is shared. `hyperprotect.mixin.json` references
+  the same FQCNs on both channels, so the mixin list and counts are identical.
+
 ### Notes
-- The 30-slot bridge protocol and verdict contract are unchanged (HyperFactions 0.14.0 consumes them);
-  the OG-coexistence `SAFE_MIXINS` set (14) and `totalMixins = 29` are unchanged.
-- `FlameTickInterceptor`, `BenchPositionCapture`, `EntityLoadGate`, `PrefabSpawnInterceptor`,
-  `SpawnLogFilter`, and `EntryDesyncFilter` required no changes — their descriptors were verified
-  unchanged on 0.5.3 via `javap`.
+- The 30-slot bridge protocol and verdict contract are unchanged (HyperFactions 0.14.0 consumes
+  them); the OG-coexistence `SAFE_MIXINS` set (14) and `totalMixins = 29` are unchanged.
+- The 0.5.x fixes above were verified on a live 0.5.3 server in 1.3.0's original cut and their
+  descriptors re-confirmed against 0.5.6 via `javap`; `FlameTickInterceptor`, `BenchPositionCapture`,
+  `EntityLoadGate`, `PrefabSpawnInterceptor`, `SpawnLogFilter`, and `EntryDesyncFilter` required no
+  changes on either channel.
+- **Known pre-existing limitation (not a regression):** `MarkerSpawnGate` (spawn-marker NPC gating)
+  redirects a no-arg `SpawningContext.canSpawn()` that no longer exists — `SpawnMarkerEntity` calls
+  the 2-arg `canSpawn(boolean, boolean)` on both channels — so it injects nothing. Its `require = 0`
+  keeps this non-fatal in normal operation (verified: clean boot on 0.6.0-pre.4); world/chunk spawn
+  gating via `ChunkSpawnGate` is unaffected. Restoring marker gating would change spawn behavior and
+  is deferred as out of scope for this compatibility release.
 
 ## [1.2.4] - 2026-04-02
 
